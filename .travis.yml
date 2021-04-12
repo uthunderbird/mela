@@ -1,4 +1,5 @@
 language: python  # We are using Python language
+python: 3.8
 deploy:
   provider: pypi
   username: __token__
