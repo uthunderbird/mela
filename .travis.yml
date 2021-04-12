@@ -1,5 +1,6 @@
 language: python  # We are using Python language
 python: 3.8
+script: python setup.py sdist bdist_wheel
 deploy:
   provider: pypi
   username: __token__
