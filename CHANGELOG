@@ -1,6 +1,8 @@
 v 1.0.3
 Implemented dynamic routing key and other message params
 Added example of splitter service
+Project was renamed into `Mela`
+First release on GitHub and PyPI
 
 v 1.0.2
 Bumped version of aio-pika from 6.7.1 up to 6.8.0
