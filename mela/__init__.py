@@ -287,6 +287,7 @@ class MelaPublisher(Connectable):
         super().on_config_update()
         self.config.setdefault('connection', "default")
         self.config.setdefault('skip_unroutables', False)
+        self.config.setdefault('exchange_type', "direct")
         if 'routing_key' not in self.config:
             raise KeyError(f"Routing key is not set for publisher {self.name}")
         self.default_routing_key = self.config['routing_key']
@@ -303,7 +304,8 @@ class MelaPublisher(Connectable):
     async def ensure_exchange(self):
         await self.ensure_channel()
         try:
-            self.exchange = await self.channel.declare_exchange(self.config['exchange'], durable=True)
+            self.exchange = await self.channel.declare_exchange(self.config['exchange'],
+                                                                type=self.config['exchange_type'], durable=True)
         except Exception as e:
             self.log.warning("Error while declaring exchange")
             self.log.warning(e.__class__.__name__, e.args)
@@ -410,6 +412,7 @@ class MelaConsumer(Connectable):
         if 'routing_key' not in self.config:
             raise KeyError(f"No routing key found in config for {self.name}")
         self.config.setdefault('prefetch_count', 1)
+        self.config.setdefault('exchange_type', "direct")
 
     async def ensure_channel(self):
         await super().ensure_channel()
@@ -419,7 +422,8 @@ class MelaConsumer(Connectable):
         if self.exchange is None:
             await self.ensure_channel()
             try:
-                self.exchange = await self.channel.declare_exchange(self.config['exchange'], durable=True)
+                self.exchange = await self.channel.declare_exchange(self.config['exchange'],
+                                                                    type=self.config['exchange_type'], durable=True)
             except Exception as e:
                 self.log.warning("Error while declaring exchange")
                 self.log.warning(e.__class__.__name__, e.args)
@@ -496,6 +500,10 @@ class MelaService(Loggable):
         for obj in response:
             await self.publish(obj)
 
+    async def __response_processor_for_async_generator(self, response):
+        async for obj in response:
+            await self.publish(obj)
+
     async def __response_processor_for_function(self, response):
         await self.publish(response)
 
@@ -536,6 +544,8 @@ class MelaService(Loggable):
         self.consumer.set_processor(func)
         if inspect.isgeneratorfunction(self.consumer.process):
             self.response_processor = self.__response_processor_for_generator
+        elif inspect.isasyncgenfunction(self.consumer.process):
+            self.response_processor = self.__response_processor_for_async_generator
         else:
             self.response_processor = self.__response_processor_for_function
 

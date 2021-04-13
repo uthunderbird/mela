@@ -1,3 +1,7 @@
+v 1.0.4
+Added an option to use async generators as service processors
+Added support of different exchange types
+
 v 1.0.3
 Implemented dynamic routing key and other message params
 Added example of splitter service
