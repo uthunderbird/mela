@@ -496,6 +496,10 @@ class MelaService(Loggable):
         for obj in response:
             await self.publish(obj)
 
+    async def __response_processor_for_async_generator(self, response):
+        async for obj in response:
+            await self.publish(obj)
+
     async def __response_processor_for_function(self, response):
         await self.publish(response)
 
@@ -536,6 +540,8 @@ class MelaService(Loggable):
         self.consumer.set_processor(func)
         if inspect.isgeneratorfunction(self.consumer.process):
             self.response_processor = self.__response_processor_for_generator
+        elif inspect.isasyncgenfunction(self.consumer.process):
+            self.response_processor = self.__response_processor_for_async_generator
         else:
             self.response_processor = self.__response_processor_for_function
 
