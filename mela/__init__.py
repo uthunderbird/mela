@@ -556,3 +556,9 @@ class MelaService(Loggable):
 
     async def cancel(self):
         await self.consumer.cancel()
+
+    def __call__(self, *args, **kwds):
+        """Method that allows calling a function that is used for
+        service creation.
+        """
+        return self.consumer.process(*args, **kwds)
