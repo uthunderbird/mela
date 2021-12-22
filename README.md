@@ -63,5 +63,5 @@ Developed in Alem Research.
 
 Core maintainer: Daniyar Supiyev (undead.thunderbird@gmail.com).
 
-Producer: Sergazy Narynov.
+Sponsor: Sergazy Narynov.
 
