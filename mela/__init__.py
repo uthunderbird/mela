@@ -273,8 +273,8 @@ class MelaPublisher(Connectable):
         self.log = logging.getLogger(app.name + '.' + self.name)
         super(MelaPublisher, self).__init__(app, self.name)
         self.exchange: Optional[aio_pika.RobustExchange] = None
-        self.queue = asyncio.Queue(maxsize=1)
         self.default_routing_key = None
+        self.is_prepared = asyncio.Event()
         self.decode = self.decode
         self.publishing_params = {}
         self.permanent_publishing_options = {}
@@ -285,7 +285,7 @@ class MelaPublisher(Connectable):
         """
         THIS METHOD WILL BE DEPRECATED IN v1.1. DO NOT USE IT.
         """
-        self.loop.create_task(self.publish(*args, **kwargs))
+        self.loop.create_task(self.publish_direct(*args, **kwargs))
 
     def on_config_update(self):
         super().on_config_update()
@@ -293,8 +293,8 @@ class MelaPublisher(Connectable):
         self.config.setdefault('skip_unroutables', False)
         self.config.setdefault('exchange_type', "direct")
         if 'routing_key' not in self.config:
-            raise KeyError(f"Routing key is not set for publisher {self.name}")
-        self.default_routing_key = self.config['routing_key']
+            self.log.warning(f"Default routing key is not set for publisher {self.name}")
+        self.default_routing_key = self.config.get('routing_key', "")
         if 'exchange' not in self.config:
             raise KeyError(f"Exchange is not set for publisher {self.name}")
 
@@ -320,21 +320,16 @@ class MelaPublisher(Connectable):
             routing_key: Optional[str] = None,
             **options
     ):
-        routing_key = routing_key or self.default_routing_key or ''
-        options = {**self.permanent_publishing_options, **options}
-        options.setdefault('content_type', "application/json")
-        options.setdefault('content_encoding', "UTF-8")
-        kwargs = {
-            'message': aio_pika.Message(self.decode(message), **options),
-            'routing_key': routing_key,
-            **self.publishing_params
-        }
-        await self.queue.put(kwargs)
+        """
+        THIS METHOD WILL BE REPLACED WITH `publish_direct` in 1.1
+        """
+        return await self.publish_direct(message, routing_key, **options)
 
     async def prepare(self):
         self.log.info("preparing publisher")
         await self.ensure_connection()
         await self.ensure_exchange()
+        self.is_prepared.set()
 
     async def publish_direct(
             self,
@@ -342,7 +337,11 @@ class MelaPublisher(Connectable):
             routing_key: Optional[str] = None,
             **options
     ):
-        self.log.info("Going to directly publish message")
+        """
+        THIS METHOD WILL BE DEPRECATED IN 1.1
+        """
+        await self.is_prepared.wait()
+        self.log.debug(f"Going to directly publish message {message}")
         routing_key = routing_key or self.default_routing_key or ''
         options = {**self.permanent_publishing_options, **options}
         return await self.exchange.publish(
@@ -354,42 +353,9 @@ class MelaPublisher(Connectable):
             **self.publishing_params
         )
 
-    async def _publish(self, **kwargs):
-        is_published = False
-        resp = None
-        while not is_published:
-            try:
-                resp: Optional[aiormq.types.ConfirmationFrameType, aiormq.types.DeliveredMessage] = \
-                    await self.exchange.publish(**kwargs)
-                is_published = isinstance(resp,
-                                          aiormq.spec.Basic.Ack)  # or isinstance(resp, aiormq.types.DeliveredMessage)
-                if not is_published:
-                    error_message = f"Delivery response is {resp.delivery.__class__.__name__}." \
-                                    f"It looks like message is unroutable"
-                    if self.config['skip_unroutables']:
-                        self.log.warning(error_message)
-                        is_published = True
-                    else:
-
-                        raise TypeError(error_message)
-            except aiormq.exceptions.ChannelInvalidStateError:
-                await self.ensure_exchange()
-            except Exception as e:
-                self.log.exception("Unhandled exception: ")
-        return resp
-
-    async def wait(self):
-        await self.queue.join()
-
     async def run(self):
-        await self.ensure_connection()
-        async with self.connection:
-            await self.ensure_exchange()
-            while True:
-                message = await self.queue.get()
-                self.log.debug(f"Got message should be published by {self.name}")
-                await self._publish(**message)
-                self.queue.task_done()
+        self.log.info(f"Running publisher {self.name}")
+        await self.prepare()
 
 
 class MelaConsumer(Connectable):
@@ -521,14 +487,14 @@ class MelaService(Loggable):
 
     async def publish(self, message):
         if isinstance(message, tuple):
-            await self.publisher.publish(message[0], **message[1])
+            await self.publisher.publish_direct(message[0], **message[1])
         else:
-            await self.publisher.publish(message)
+            await self.publisher.publish_direct(message)
 
     async def on_message_processed(self, response, message: aio_pika.IncomingMessage):
         if response is not None:
             await self.response_processor(response)
-            await self.publisher.wait()
+            # await self.publisher.wait()
         if not message.processed:
             message.ack()
 
