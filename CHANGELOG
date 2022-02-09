@@ -1,3 +1,6 @@
+v 1.0.6
+Added simple exception handling.
+
 v 1.0.4
 Added an option to use async generators as service processors
 Added support of different exchange types
