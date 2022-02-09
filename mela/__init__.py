@@ -84,6 +84,10 @@ class Mela(Loggable):
         self.publishers = {}
         self.consumers = {}
 
+    def __default_exception_handler(self, loop, context):
+        loop.stop()
+        raise context['exception']
+
     def on_config_update(self):
         self.config.setdefault('publishers', {})
         self.config.setdefault('producers', {})  # TODO DEPRECATION remove in v1.1
@@ -175,9 +179,9 @@ class Mela(Loggable):
         return self._connection_registry
 
     def run(self, coro=None):
+        self.loop.set_exception_handler(self.__default_exception_handler)
         for runnable in self._runnables:
             self.loop.create_task(runnable.run())
-
         self.log.info("Running app...")
 
         if coro:
