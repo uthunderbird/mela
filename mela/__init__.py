@@ -165,6 +165,17 @@ class Mela(Loggable):
 
         return decorator
 
+    def rpc_server(self, name):
+
+        def decorator(func):
+            rpc_server_instance = MelaRPCServer(self, name)
+            rpc_server_instance.configure(self.config['rpc-services'][name])
+            rpc_server_instance.set_processor(func)
+            self.register(rpc_server_instance)
+            return rpc_server_instance
+
+        return decorator
+
     def register(self, other):
         if isinstance(other, MelaService):
             self.services[other.name] = other
