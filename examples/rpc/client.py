@@ -8,9 +8,9 @@ fetcher = app.rpc_client("fetcher")
 
 
 async def main():
-    content1 = await fetcher(url1)
+    content1 = await fetcher.call(url1)
     print(content1)
-    content2 = await fetcher(url2)
+    content2 = await fetcher.call(url2)
     print(content2)
 
 

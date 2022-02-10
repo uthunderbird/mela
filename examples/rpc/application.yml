@@ -2,8 +2,8 @@ connections:
   default:
     host: localhost
     port: 5672
-    username: user
-    password: bitnami
+    username: admin
+    password: admin
 
 services:
   printer:
@@ -20,4 +20,4 @@ rpc-services:
     exchange: fetcher-x
     routing_key: fetcher-k
     queue: fetcher-q
-
+    response_exchange: fetching-result-x
