@@ -5,16 +5,16 @@ from mela import Mela
 app = Mela(__name__)
 app.configure_from_yaml('application.yml')
 
-i = 0
+
+async def fetch(url):
+    # let's pretend we're asynchronously fetching url here and return its body
+    await asyncio.sleep(1)
+    return url
 
 
 @app.rpc_server("fetcher")
-async def fetcher(body, message):
-    global i
-    i+=1
-    await asyncio.sleep(5-i)
-    print(body)
-    return body
+async def fetcher(link, message):
+    return await fetch(link)
 
 
 if __name__ == '__main__':
