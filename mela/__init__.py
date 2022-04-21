@@ -288,7 +288,6 @@ class MelaPublisher(Connectable):
 
     def __init__(self, app: Mela, name):
         self.name = name
-        self.log = logging.getLogger(app.name + '.' + self.name)
         super(MelaPublisher, self).__init__(app, self.name)
         self.exchange: Optional[aio_pika.RobustExchange] = None
         self.default_routing_key = None
@@ -344,7 +343,7 @@ class MelaPublisher(Connectable):
         return await self.publish_direct(message, routing_key, **options)
 
     async def prepare(self):
-        self.log.info("preparing publisher")
+        self.log.debug("preparing publisher")
         await self.ensure_connection()
         await self.ensure_exchange()
         self.is_prepared.set()
@@ -372,8 +371,9 @@ class MelaPublisher(Connectable):
         )
 
     async def run(self):
-        self.log.info(f"Running publisher {self.name}")
+        self.log.debug(f"Running publisher {self.name}")
         await self.prepare()
+        self.log.info(f"Publisher `{self.name}` is ready")
 
     def update_permanent_publishing_options(self, **new):
         self.permanent_publishing_options.update(new)
@@ -385,7 +385,6 @@ class MelaConsumer(Connectable):
         super().__init__(app, name)
         self.connection = None
         self.connection_established = asyncio.Event()
-        self.log = logging.Logger("MelaConsumer", level=logging.INFO)
         self.channel: Optional[aio_pika.RobustChannel] = None
         self.exchange: Optional[aio_pika.RobustExchange] = None
         self.queue: Optional[aio_pika.RobustQueue] = None
@@ -447,8 +446,10 @@ class MelaConsumer(Connectable):
         await self.ensure_connection()
 
         async with self.connection:
+            self.log.debug("Connected successfully")
             await self.ensure_binding()
-
+            self.log.debug("Bindings are ready")
+            self.log.info("Ready to process messages!")
             async with self.queue.iterator() as queue_iter:
                 self.queue_iterator = queue_iter
                 async for message in queue_iter:  # type: aio_pika.IncomingMessage
@@ -520,10 +521,10 @@ class MelaService(Loggable):
         if response is not None:
             await self.response_processor(response)
             # await self.publisher.wait()
-        if not message.processed:
-            self.log.warning("Message is not processed, we're going to automatically `ack` it. We recommend to "
-                             "explicitly process message: `ack`, `nack` or `reject` it.")
-            message.ack()
+        # if not message.processed:
+        #     self.log.warning("Message is not processed, we're going to automatically `ack` it. We recommend to "
+        #                      "explicitly process message: `ack`, `nack` or `reject` it.")
+        #     message.ack()
 
     def on_config_update(self):
         connection_name = self.config.get("connection", "default")
@@ -547,9 +548,9 @@ class MelaService(Loggable):
             self.response_processor = self.__response_processor_for_function
 
     async def run(self):
-        self.log.info(f"Connecting {self.name} service")
-        self.app.loop.create_task(self.publisher.run())
-        self.app.loop.create_task(self.consumer.run())
+        self.log.info(f"Running service `{self.name}`...")
+        publisher_task = self.app.loop.create_task(self.publisher.run())
+        consumer_task = self.app.loop.create_task(self.consumer.run())
 
     async def cancel(self):
         await self.consumer.cancel()
@@ -592,10 +593,10 @@ class MelaRPCServer(MelaService):
         if response is not None:
             await self.response_processor(response, message)
             # await self.publisher.wait()
-        if not message.processed:
-            self.log.warning("Message is not processed, we're going to automatically `ack` it. We recommend to "
-                             "explicitly process message: `ack`, `nack` or `reject` it.")
-            message.ack()
+        # if not message.processed:
+        #     self.log.warning("Message is not processed, we're going to automatically `ack` it. We recommend to "
+        #                      "explicitly process message: `ack`, `nack` or `reject` it.")
+        #     message.ack()
 
     def set_processor(self, func):
         self.consumer.set_processor(func)
