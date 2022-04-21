@@ -1,3 +1,5 @@
+import asyncio
+
 from mela import Mela
 
 app = Mela(__name__)
@@ -8,10 +10,13 @@ fetcher = app.rpc_client("fetcher")
 
 
 async def main():
-    content1 = await fetcher.call(url1)
-    print(content1)
-    content2 = await fetcher.call(url2)
-    print(content2)
+    # content1 = await
+    # print(content1)
+    # content2 = await
+    # print(content2)
+
+    g = await asyncio.gather(fetcher.call(url1), fetcher.call(url2))
+    print(g)
 
 
 if __name__ == '__main__':
