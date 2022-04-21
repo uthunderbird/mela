@@ -10,11 +10,11 @@ fetcher = app.rpc_client("fetcher")
 
 
 async def main():
-    # content1 = await
-    # print(content1)
-    # content2 = await
-    # print(content2)
+    # RPC calls over RabbitMQ never were simpler!
+    res = await fetcher.call({'asdf': 5, 'lol': [3, 8, ["haha", "wow"]]})
+    print(res)
 
+    # we can even gather call results!
     g = await asyncio.gather(fetcher.call(url1), fetcher.call(url2))
     print(g)
 
