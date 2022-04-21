@@ -1,3 +1,9 @@
+v 1.0.8rc2
+RPC services and clients.
+
+v 1.0.8rc1
+Removed non-direct publishing.
+
 v 1.0.7
 Added simple exception handling.
 

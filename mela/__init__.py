@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional, Callable, Union
 
 import logging
@@ -164,6 +165,23 @@ class Mela(Loggable):
             return service
 
         return decorator
+
+    def rpc_server(self, name):
+
+        def decorator(func):
+            rpc_server_instance = MelaRPCServer(self, name)
+            rpc_server_instance.configure(self.config['rpc-services'][name])
+            rpc_server_instance.set_processor(func)
+            self.register(rpc_server_instance)
+            return rpc_server_instance
+
+        return decorator
+
+    def rpc_client(self, name):
+        rpc_client_instance = MelaRPCClient(self, name)
+        rpc_client_instance.configure(self.config['rpc-services'][name])
+        self.register(rpc_client_instance)
+        return rpc_client_instance
 
     def register(self, other):
         if isinstance(other, MelaService):
@@ -357,6 +375,9 @@ class MelaPublisher(Connectable):
         self.log.info(f"Running publisher {self.name}")
         await self.prepare()
 
+    def update_permanent_publishing_options(self, **new):
+        self.permanent_publishing_options.update(new)
+
 
 class MelaConsumer(Connectable):
 
@@ -433,10 +454,14 @@ class MelaConsumer(Connectable):
                 async for message in queue_iter:  # type: aio_pika.IncomingMessage
                     async with message.process(ignore_processed=True):
                         body = self.encode(message.body)
-                        if inspect.iscoroutinefunction(self.process):
-                            resp = await self.process(body, message)
-                        else:
-                            resp = self.process(body, message)
+                        try:
+                            if inspect.iscoroutinefunction(self.process):
+                                resp = await self.process(body, message)
+                            else:
+                                resp = self.process(body, message)
+                        except Exception as e:
+                            print(e)
+                            raise e
                         await self.on_message_processed(resp, message)
 
     @staticmethod
@@ -485,17 +510,18 @@ class MelaService(Loggable):
         self.consumer = MelaConsumer(app, consumer_name)
         self.response_processor = None
 
-    async def publish(self, message):
+    async def publish(self, message, **options):
         if isinstance(message, tuple):
-            await self.publisher.publish_direct(message[0], **message[1])
+            await self.publisher.publish_direct(message[0], **message[1], **options)
         else:
-            await self.publisher.publish_direct(message)
+            await self.publisher.publish_direct(message, **options)
 
     async def on_message_processed(self, response, message: aio_pika.IncomingMessage):
         if response is not None:
             await self.response_processor(response)
             # await self.publisher.wait()
         if not message.processed:
+            # if message still not processed we should mark it as processed
             message.ack()
 
     def on_config_update(self):
@@ -532,3 +558,120 @@ class MelaService(Loggable):
         service creation.
         """
         return self.consumer.process(*args, **kwds)
+
+
+class MelaRPCServer(MelaService):
+
+    def on_config_update(self):
+        connection_name = self.config.get("connection", "default")
+        self.config['publisher'] = {
+            'connection': connection_name,
+            'exchange': self.config.get('response_exchange', ""),  # Use default exchange if exchange is not set
+            'routing_key': "",  # use empty routing key as default
+            'skip_unroutables': True  # We should ignore unroutable messages because they can
+            # occasionally block RPC server
+        }
+        self.config['consumer'] = {
+            'connection': connection_name,
+            'exchange': self.config['exchange'],
+            'routing_key': self.config['routing_key'],
+            'queue': self.config['queue']
+        }
+        self.publisher.configure(self.config['publisher'])
+        self.consumer.configure(self.config['consumer'])
+        self.consumer.set_on_message_processed(self.on_message_processed)
+
+    async def __response_processor_for_function(self, response, message: aio_pika.IncomingMessage = None):
+        if message:
+            await self.publish(response, correlation_id=message.correlation_id, routing_key=message.reply_to)
+        else:
+            raise AttributeError("Message is not provided")
+
+    async def on_message_processed(self, response, message: aio_pika.IncomingMessage):
+        if response is not None:
+            await self.response_processor(response, message)
+            await self.publisher.wait()
+        if not message.processed:
+            self.log.warning("Message is not processed, we're going to automatically `ack` it. We recommend to "
+                             "explicitly process message: `ack`, `nack` or `reject` it.")
+            message.ack()
+
+    def set_processor(self, func):
+        self.consumer.set_processor(func)
+        self.response_processor = self.__response_processor_for_function
+
+
+class MelaRPCClientConsumer(MelaConsumer):
+
+    def __init__(self, app, name):
+        super().__init__(app, name)
+        self.futures = {}
+
+    def process(self, body, message):
+        future = self.futures.pop(message.correlation_id)
+        future.set_result(body)
+
+    async def ensure_queue(self):
+        if self.queue is None:
+            await self.ensure_channel()
+            try:
+                self.queue = await self.channel.declare_queue(exclusive=True)
+            except Exception as e:
+                self.log.warning("Error while declaring queue")
+                self.log.warning(e.__class__.__name__, e.args)
+
+    async def ensure_binding(self):
+        await self.ensure_exchange()
+        await self.ensure_queue()
+        try:
+            await self.queue.bind(self.config['exchange'], routing_key=self.queue.name)
+        except Exception as e:
+            self.log.warning("Error while declaring queue")
+            self.log.warning(e.__class__.__name__, e.args)
+
+    def on_config_update(self):
+        Loggable.on_config_update(self)
+        if 'exchange' not in self.config:
+            raise KeyError(f"No exchange found in config for {self.name}")
+        self.config.setdefault('prefetch_count', 1)
+        self.config.setdefault('exchange_type', "direct")
+
+
+class MelaRPCClient(MelaService):
+
+    def __init__(self, app, name):
+        consumer_name = name + '_rpc_consumer'
+        publisher_name = name + '_rpc_publisher'
+        super().__init__(app, name)
+        self.publisher = MelaPublisher(app, publisher_name)
+        self.consumer = MelaRPCClientConsumer(app, consumer_name)
+        self.response_processor = None
+
+    def on_config_update(self):
+        connection_name = self.config.get("connection", "default")
+        self.config['publisher'] = {
+            'connection': connection_name,
+            'exchange': self.config['exchange'],
+            'routing_key': self.config['routing_key'],
+        }
+        self.config['consumer'] = {
+            'connection': connection_name,
+            'exchange': self.config.get('response_exchange', ""),
+        }
+        self.publisher.configure(self.config['publisher'])
+        self.consumer.configure(self.config['consumer'])
+        self.consumer.set_on_message_processed(self.on_message_processed)
+
+    async def call(self, body):
+        correlation_id = str(uuid.uuid4())
+        future = self.app.loop.create_future()
+        self.consumer.futures[correlation_id] = future
+        await self.consumer.ensure_binding()
+        await self.publisher.ensure_exchange()
+        await self.publisher.publish_direct(body, correlation_id=correlation_id, reply_to=self.consumer.queue.name)
+        return await future
+
+    async def run(self):
+        self.log.info(f"Connecting {self.name} service")
+        self.app.loop.create_task(self.consumer.run())
+        self.app.loop.create_task(self.publisher.run())
