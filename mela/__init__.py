@@ -460,9 +460,16 @@ class MelaConsumer(Connectable):
                             else:
                                 resp = self.process(body, message)
                         except Exception as e:
-                            print(e)
+                            self.log.exception("Message processing error")
+                            message.reject(requeue=True)
                             raise e
-                        await self.on_message_processed(resp, message)
+                        try:
+                            await self.on_message_processed(resp, message)
+                        except Exception as e:
+                            self.log.exception("Message processing error in generator. Be careful! Possibly published "
+                                               "messages duplication")
+                            message.reject(requeue=True)
+                            raise e
 
     @staticmethod
     async def on_message_processed(response, message):
