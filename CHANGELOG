@@ -1,3 +1,13 @@
+v 1.0.9
+Fixed issue #6:
+    It seems that unhandled exceptions which cause the app to quit automatically nack incoming messages
+    without requeueing them, leading to data loss. This is true of exceptions thrown within both mela
+    code (e.g. json deserialisation exceptions) as well as within application code. Confirmed in 1.0.5 and 1.0.7
+Some logging improvements
+Fixed the bug with duplicated anonymous queues for one RPC client.
+Added dead letter exchange example and fixed dead letter exchange default routing key to empty string
+Added an option to directly configure requeue strategy on broken messages for consumers
+
 v 1.0.8
 RPC services and clients.
 Removed non-direct publishing.

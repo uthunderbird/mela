@@ -393,6 +393,9 @@ class MelaConsumer(Connectable):
         self.on_message_processed: Optional[Callable] = self.on_message_processed
         self.queue_iterator: Optional[aio_pika.queue.QueueIterator] = None
 
+    def is_dead_letter_exchange_configured(self):
+        return 'dead_letter_exchange' in self.config
+
     def on_config_update(self):
         super().on_config_update()
         if 'queue' not in self.config:
@@ -423,11 +426,11 @@ class MelaConsumer(Connectable):
             await self.ensure_channel()
             try:
                 args = {}
-                if 'dead_letter_exchange' in self.config:
+                if self.is_dead_letter_exchange_configured():
+                    self.config.setdefault("dead_letter_routing_key", "")
                     await self.channel.declare_exchange(self.config['dead_letter_exchange'], durable=True)
                     args['x-dead-letter-exchange'] = self.config['dead_letter_exchange']
-                    if 'dead_letter_routing_key' in self.config and self.config['dead_letter_routing_key']:
-                        args['x-dead-letter-routing-key'] = self.config['dead_letter_routing_key']
+                    args['x-dead-letter-routing-key'] = self.config['dead_letter_routing_key']
                 self.queue = await self.channel.declare_queue(self.config['queue'], durable=True, arguments=args)
             except Exception as e:
                 self.log.warning("Error while declaring queue")
@@ -442,8 +445,17 @@ class MelaConsumer(Connectable):
             self.log.warning("Error while declaring queue")
             self.log.warning(e.__class__.__name__, e.args)
 
+    def get_broken_messages_requeue_strategy(self):
+        if 'requeue_broken_messages' in self.config:
+            return self.config['requeue_broken_messages']
+        if self.is_dead_letter_exchange_configured():
+            return False
+        return True
+
     async def run(self):
         await self.ensure_connection()
+
+        should_requeue_broken_messages = self.get_broken_messages_requeue_strategy()
 
         async with self.connection:
             self.log.debug("Connected successfully")
@@ -462,14 +474,14 @@ class MelaConsumer(Connectable):
                                 resp = self.process(body, message)
                         except Exception as e:
                             self.log.exception("Message processing error")
-                            message.reject(requeue=True)
+                            await message.nack(requeue=should_requeue_broken_messages)
                             raise e
                         try:
                             await self.on_message_processed(resp, message)
                         except Exception as e:
                             self.log.exception("Message processing error in generator. Be careful! Possibly published "
                                                "messages duplication")
-                            message.reject(requeue=True)
+                            await message.nack(requeue=should_requeue_broken_messages)
                             raise e
 
     @staticmethod
@@ -615,19 +627,20 @@ class MelaRPCClientConsumer(MelaConsumer):
     def __init__(self, app, name):
         super().__init__(app, name)
         self.futures = {}
+        self.ensure_queue_lock = asyncio.Lock()
 
     def process(self, body, message):
         future = self.futures.pop(message.correlation_id)
         future.set_result(body)
 
     async def ensure_queue(self):
-        if self.queue is None:
-            await self.ensure_channel()
-            try:
-                self.queue = await self.channel.declare_queue(exclusive=True)
-            except Exception as e:
-                self.log.warning("Error while declaring queue")
-                self.log.warning(e.__class__.__name__, e.args)
+        async with self.ensure_queue_lock:
+            if self.queue is None:
+                await self.ensure_channel()
+                try:
+                    self.queue = await self.channel.declare_queue(exclusive=True)
+                except Exception as e:
+                    self.log.exception("Error while declaring queue")
 
     async def ensure_binding(self):
         await self.ensure_exchange()
@@ -683,4 +696,4 @@ class MelaRPCClient(MelaService):
     async def run(self):
         self.log.info(f"Connecting {self.name} service")
         self.app.loop.create_task(self.consumer.run())
-        self.app.loop.create_task(self.publisher.run())
+        await self.publisher.run()

@@ -1,0 +1,18 @@
+connections:
+  default:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+
+services:
+  printer:
+    consumer:
+      exchange: dlx-test-x
+      routing_key: dlx-test-k
+      queue: dlx-test-q
+      dead_letter_exchange: dlx-test-dead-letter-x
+      dead_letter_routing_key: dlx-test-dead-letter-k
+    publisher:
+      exchange: test-x
+      routing_key: test_queue
