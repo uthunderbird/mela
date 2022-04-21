@@ -521,7 +521,8 @@ class MelaService(Loggable):
             await self.response_processor(response)
             # await self.publisher.wait()
         if not message.processed:
-            # if message still not processed we should mark it as processed
+            self.log.warning("Message is not processed, we're going to automatically `ack` it. We recommend to "
+                             "explicitly process message: `ack`, `nack` or `reject` it.")
             message.ack()
 
     def on_config_update(self):
@@ -590,7 +591,7 @@ class MelaRPCServer(MelaService):
     async def on_message_processed(self, response, message: aio_pika.IncomingMessage):
         if response is not None:
             await self.response_processor(response, message)
-            await self.publisher.wait()
+            # await self.publisher.wait()
         if not message.processed:
             self.log.warning("Message is not processed, we're going to automatically `ack` it. We recommend to "
                              "explicitly process message: `ack`, `nack` or `reject` it.")

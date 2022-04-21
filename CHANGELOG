@@ -1,7 +1,5 @@
-v 1.0.8rc2
+v 1.0.8
 RPC services and clients.
-
-v 1.0.8rc1
 Removed non-direct publishing.
 
 v 1.0.7
