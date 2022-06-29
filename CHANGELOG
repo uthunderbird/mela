@@ -1,3 +1,6 @@
+v 1.0.10
+Implemented headers for RPC clients. Check it here: `examples/rpc/client.py`
+
 v 1.0.9
 Fixed issue #6:
     It seems that unhandled exceptions which cause the app to quit automatically nack incoming messages

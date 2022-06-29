@@ -8,6 +8,8 @@ app.read_config_yaml('application.yml')
 
 fetcher = app.rpc_client("fetcher")
 
+bot_manager = app.rpc_client("bot_manager")
+
 
 async def main():
     # RPC calls over RabbitMQ never were simpler!
@@ -17,6 +19,18 @@ async def main():
     # we can even gather call results!
     g = await asyncio.gather(fetcher.call(url1), fetcher.call(url2))
     print(g)
+
+    create_bot_result = await bot_manager.call(
+        {'bot_id': 1, 'bot_username': "LalkaPalka", 'bot_password': "supersecret"},
+        headers={'method': 'create_bot'}
+    )
+    print(f"create_bot result: {create_bot_result}")
+
+    get_bot_result = await bot_manager.call({'bot_id': 1}, headers={'method': 'get_bot'})
+    print(f"get_bot_result: {get_bot_result}")
+
+    unknown_method_result = await bot_manager.call({'bot_id': 4}, headers={'method': 'getBot'})
+    print(f"unknown method result: {unknown_method_result}")
 
 
 if __name__ == '__main__':

@@ -684,13 +684,19 @@ class MelaRPCClient(MelaService):
         self.consumer.configure(self.config['consumer'])
         self.consumer.set_on_message_processed(self.on_message_processed)
 
-    async def call(self, body):
+    async def call(self, body, headers=None, **options):
         correlation_id = str(uuid.uuid4())
         future = self.app.loop.create_future()
         self.consumer.futures[correlation_id] = future
         await self.consumer.ensure_binding()
         await self.publisher.ensure_exchange()
-        await self.publisher.publish_direct(body, correlation_id=correlation_id, reply_to=self.consumer.queue.name)
+        await self.publisher.publish_direct(
+            body,
+            correlation_id=correlation_id,
+            reply_to=self.consumer.queue.name,
+            headers=headers,
+            **options
+        )
         return await future
 
     async def run(self):

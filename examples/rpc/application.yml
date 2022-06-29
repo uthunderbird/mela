@@ -21,3 +21,8 @@ rpc-services:
     routing_key: fetcher-k
     queue: fetcher-q
     response_exchange: fetching-result-x
+  bot_manager:
+    exchange: botmanager-x
+    routing_key: botmanager-k
+    queue: botmanager-q
+    response_exchange: botmanager-result-x
