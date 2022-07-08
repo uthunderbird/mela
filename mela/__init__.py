@@ -196,12 +196,15 @@ class Mela(Loggable):
     def connections(self):
         return self._connection_registry
 
-    def run(self, coro=None):
+    def setup(self):
         self.loop.set_exception_handler(self.__default_exception_handler)
         for runnable in self._runnables:
             self.loop.create_task(runnable.run())
-        self.log.info("Running app...")
 
+    def run(self, coro=None):
+        self.setup()
+
+        self.log.info("Running app...")
         if coro:
             self.loop.run_until_complete(coro)
         else:
