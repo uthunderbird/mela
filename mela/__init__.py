@@ -30,7 +30,7 @@ class Configurable:
         self.ensure_configured()
 
     def configure_from_yaml(self, filename):
-        env = envyaml.EnvYAML(filename)
+        env = envyaml.EnvYAML(filename, include_environment=False)
         self.configure(dict(env))
 
     def read_config_yaml(self, filename):

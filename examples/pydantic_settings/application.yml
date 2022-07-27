@@ -1,0 +1,30 @@
+connections:
+  input_connection:
+    host: qwe
+    port: 5672
+    username: rabbitmq-bridge
+    password: rabbitmq-bridge
+    connTimeout: 1000
+    heartbeat: 360
+  output_connection:
+    host: asd
+    port: 5672
+    username: rabbitmq-bridge
+    password: rabbitmq-bridge
+    connTimeout: 1000
+    heartbeat: 360
+
+consumers:
+  input:
+    connection: input_connection
+    prefetch_count: 100
+    routing_key: general-sentiment-q
+    exchange: general-sentiment-x
+    queue: general-sentiment-temp-q
+    decode: json
+
+producers:
+  output:
+    connection: output_connection
+    routing_key: general-sentiment-q
+    exchange: general-sentiment-x

@@ -1,5 +1,5 @@
 UPCOMING
-pass
+Pydantic based app settings
 
 v 1.0.11
 Make it possible to just register endpoints, without running loop (method `Mela.setup()`)
