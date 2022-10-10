@@ -1,2 +1,2 @@
-aio-pika==8.2.1
+aio-pika==8.2.2
 envyaml==1.10.211231

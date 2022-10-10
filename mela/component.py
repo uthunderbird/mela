@@ -1,7 +1,6 @@
 import typing
 from abc import ABC
 from abc import abstractmethod
-from asyncio import Event
 from enum import Enum
 from logging import Logger
 from logging import getLogger
@@ -16,60 +15,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import Extra
 
-
-class Component(ABC):
-
-    def __init__(self, name: str, parent: Optional['Component'] = None):
-        self._name: str = name
-        self._parent: Optional['Component'] = None
-        if parent:
-            self.set_parent(parent)
-        self.setup_completed: Event = Event()
-        self.shutdown_completed: Event = Event()
-
-    @property
-    def parent(self) -> Optional['Component']:
-        return self.parent
-
-    @property
-    def name(self) -> str:
-        full_name = self._name
-        ancestor = self.parent
-        while ancestor:
-            full_name = f"{ancestor.name}.{full_name}"
-            ancestor = ancestor.parent
-        return full_name
-
-    @abstractmethod
-    def setup(self):
-        self.setup_completed.set()
-
-    def set_parent(self, parent: 'Component'):
-        assert self._parent is None
-        self._parent = parent
-
-    def shutdown(self):
-        self.shutdown_completed.set()
-
-    def run(self):
-        assert self.setup_completed.is_set()
-        assert not self.shutdown_completed.is_set()
-
-
-class ConfigurableComponent(Component, ABC):
-
-    CONFIG_CLASS = BaseModel
-
-    def __init__(self, name: str, parent: Optional['Component'] = None, config: Optional[CONFIG_CLASS] = None):
-        super(ConfigurableComponent, self).__init__(name, parent)
-        self._config = None
-        if config:
-            self.configure(self._config)
-
-    def configure(self, config: Optional[CONFIG_CLASS] = None):
-        assert config is None
-        assert not self.setup_completed.is_set()
-        self._config = config
+from mela.abc import AbstractComponent, AbstractConfigurableComponent
 
 
 class LogLevelEnum(str, Enum):
@@ -84,11 +30,11 @@ class BaseModelWithLogLevel(BaseModel):
     log_level: Optional[LogLevelEnum] = None
 
 
-class LoggableComponent(ConfigurableComponent, ABC):
+class LoggableComponent(AbstractConfigurableComponent, ABC):
     CONFIG_CLASS = BaseModelWithLogLevel
     DEFAULT_LOG_LEVEL = LogLevelEnum.INFO
 
-    def __init__(self, name: str, parent: Optional['Component'] = None, config: Optional[CONFIG_CLASS] = None):
+    def __init__(self, name: str, parent: Optional['AbstractComponent'] = None, config: Optional[CONFIG_CLASS] = None):
         super().__init__(name, parent, config)
         self.log: Optional[Logger] = None
 
@@ -101,19 +47,42 @@ class LoggableComponent(ConfigurableComponent, ABC):
         self.log.info(f"Component `{self.name}` is set up")
         self.log.debug(f"Component `{self.name}` configuration is:\n{self._config.dict()}")
 
-    @abstractmethod
     def shutdown(self):
         super().shutdown()
         self.log.info(f"Component `{self.name}` is shut down")
 
 
-class ResourceWrapper(LoggableComponent, ABC):
-    DEFAULT_LOG_LEVEL = LogLevelEnum.DEBUG
+class SingletonResourceWrapper(LoggableComponent, ABC):
+    # DEFAULT_LOG_LEVEL = LogLevelEnum.DEBUG
     RESOURCE_CLASS: typing.Type = None
 
-    @abstractmethod
+    def __init__(
+            self,
+            name: str,
+            parent: Optional[AbstractComponent] = None,
+            config: Optional[BaseModelWithLogLevel] = None,
+    ):
+        super().__init__(name, parent, config)
+        self._instance = None
+
+    def setup(self):
+        super(SingletonResourceWrapper, self).setup()
+        self._instance = self._instantiate()
+
+    def shutdown(self):
+        del self._instance
+        self._instance = None
+        super(SingletonResourceWrapper, self).shutdown()
+
     def acquire(self) -> RESOURCE_CLASS:
-        pass
+        assert self.setup_completed.is_set()
+        assert not self.shutdown_completed.is_set()
+        assert self._instance is not None
+        return self._instance
+
+    @abstractmethod
+    def _instantiate(self) -> RESOURCE_CLASS:
+        return self.RESOURCE_CLASS()
 
 
 class URLConnectionConfiguration(BaseModel):
@@ -124,6 +93,7 @@ class URLConnectionConfiguration(BaseModel):
 
     class Config:
         extra = Extra.forbid
+        arbitrary_types_allowed = True
 
 
 class HostConnectionConfiguration(BaseModel):
@@ -142,16 +112,47 @@ class HostConnectionConfiguration(BaseModel):
         extra = Extra.forbid
 
 
-class MelaConnection(ResourceWrapper):
+class MelaConnection(SingletonResourceWrapper):
 
     CONFIG_CLASS = Union[URLConnectionConfiguration, HostConnectionConfiguration]
-    RESOURCE_CLASS = AbstractRobustConnection
+    RESOURCE_CLASS = typing.Coroutine[typing.Any, typing.Any, AbstractRobustConnection]
 
-    async def acquire(self) -> RESOURCE_CLASS:
-        return await connect_robust(**self._config.dict())
+    def _instantiate(self) -> RESOURCE_CLASS:
+        return connect_robust(**self._config.dict())
+
+
+class MelaBiDirectConnection(AbstractConfigurableComponent):
+
+    def __init__(
+            self,
+            name: str,
+            parent: Optional[AbstractComponent],
+            config: Optional[BaseModelWithLogLevel],
+    ):
+        super().__init__(name, parent, config)
+        self._read: Optional[MelaConnection] = None
+        self._write: Optional[MelaConnection] = None
+
+    @property
+    def read(self):
+        if not self._read:
+            self._read = MelaConnection('read', self, self._config)
+            self._read.setup()
+        return self._read.acquire()
+
+    @property
+    def write(self):
+        if not self._write:
+            self._write = MelaConnection('write', self, self._config)
+            self._write.setup()
+        return self._write.acquire()
 
     def setup(self):
-
+        super(MelaBiDirectConnection, self).setup()
 
     def shutdown(self):
-        pass
+        if self._read:
+            self._read.shutdown()
+        if self._write:
+            self._write.shutdown()
+        super(MelaBiDirectConnection, self).shutdown()

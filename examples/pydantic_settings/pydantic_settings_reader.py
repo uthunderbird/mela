@@ -35,7 +35,7 @@ class ConnectionSettings(BaseModel):
     virtualhost: str = '/'
     ssl: bool = False
     ssl_options = dict
-    timeout: Union[float, int] = Field(120, alias='connTimeout')  # DEPRECATED alias
+    timeout: Union[float, int] = Field(120, alias='connTimeout')  # TODO Remove DEPRECATED alias
     client_properties: Optional[Dict] = None
     heartbeat: int = None
 
