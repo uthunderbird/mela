@@ -1,4 +1,5 @@
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from asyncio import Event
 from typing import Optional
 
@@ -24,7 +25,7 @@ class AbstractComponent(ABC):
         full_name = self._name
         ancestor = self.parent
         while ancestor:
-            full_name = f"{ancestor.name}.{full_name}"
+            full_name = f"{ancestor._name}.{full_name}"
             ancestor = ancestor.parent
         return full_name
 
@@ -49,11 +50,19 @@ class AbstractConfigurableComponent(AbstractComponent, ABC):
 
     CONFIG_CLASS = BaseModel
 
-    def __init__(self, name: str, parent: Optional['AbstractComponent'] = None, config: Optional[CONFIG_CLASS] = None):
+    def __init__(
+            self,
+            name: str,
+            parent: Optional['AbstractComponent'] = None,
+            config: Optional[CONFIG_CLASS] = None,
+    ):
         super(AbstractConfigurableComponent, self).__init__(name, parent)
         self._config = None
         if config:
             self.configure(config)
+        else:
+            # Default configuration init
+            self.configure(self.CONFIG_CLASS())
 
     def configure(self, config: Optional[CONFIG_CLASS] = None):
         assert self._config is None, f"Component `{self.name}` already configured"

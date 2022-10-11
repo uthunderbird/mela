@@ -1,3 +1,4 @@
+import typing
 import uuid
 from typing import Optional, Callable, Union
 
@@ -20,7 +21,7 @@ logging.basicConfig(format='%(name)s\t%(asctime)s\t%(levelname)s\t%(message)s', 
 class Configurable:
 
     def __init__(self, app: 'Mela', name=None):
-        self.config: Optional[dict] = None
+        self.config: typing.Optional[typing.Dict] = None
         self.name = name
         self.app = app
 

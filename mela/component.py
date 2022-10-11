@@ -6,16 +6,13 @@ from logging import Logger
 from logging import getLogger
 from typing import Optional
 from typing import Union
-from typing import Dict
-from aio_pika.connection import URL
 
 from aio_pika.abc import AbstractRobustConnection
-from aio_pika import connect_robust
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import Extra
+from aio_pika import connect_robust, ExchangeType, Exchange, RobustChannel
+from pydantic import BaseModel, Field
 
 from mela.abc import AbstractComponent, AbstractConfigurableComponent
+from mela.connection import URLConnectionConfiguration, HostConnectionConfiguration
 
 
 class LogLevelEnum(str, Enum):
@@ -42,7 +39,7 @@ class LoggableComponent(AbstractConfigurableComponent, ABC):
     def setup(self):
         self.log = getLogger(self.name)
         log_level = self._config.log_level or self.DEFAULT_LOG_LEVEL
-        self.log.setLevel(log_level)
+        self.log.setLevel(log_level.value)
         super().setup()
         self.log.info(f"Component `{self.name}` is set up")
         self.log.debug(f"Component `{self.name}` configuration is:\n{self._config.dict()}")
@@ -57,10 +54,10 @@ class SingletonResourceWrapper(LoggableComponent, ABC):
     RESOURCE_CLASS: typing.Type = None
 
     def __init__(
-            self,
-            name: str,
-            parent: Optional[AbstractComponent] = None,
-            config: Optional[BaseModelWithLogLevel] = None,
+        self,
+        name: str,
+        parent: Optional[AbstractComponent] = None,
+        config: Optional[BaseModelWithLogLevel] = None,
     ):
         super().__init__(name, parent, config)
         self._instance = None
@@ -85,34 +82,7 @@ class SingletonResourceWrapper(LoggableComponent, ABC):
         return self.RESOURCE_CLASS()
 
 
-class URLConnectionConfiguration(BaseModel):
-    url: URL
-    timeout: Union[float, int] = Field(120, alias='connTimeout')  # DEPRECATED alias
-    client_properties: Optional[Dict] = None
-    heartbeat: int = None
-
-    class Config:
-        extra = Extra.forbid
-        arbitrary_types_allowed = True
-
-
-class HostConnectionConfiguration(BaseModel):
-    host: str
-    port: int
-    login: str = Field(alias='username')
-    password: str
-    virtualhost: str = '/'
-    ssl: bool = False
-    ssl_options = dict
-    timeout: Union[float, int] = Field(120, alias='connTimeout')  # DEPRECATED alias
-    client_properties: Dict = dict
-    heartbeat: int = None
-
-    class Config:
-        extra = Extra.forbid
-
-
-class MelaConnection(SingletonResourceWrapper):
+class MelaConnectionWrapper(SingletonResourceWrapper):
 
     CONFIG_CLASS = Union[URLConnectionConfiguration, HostConnectionConfiguration]
     RESOURCE_CLASS = typing.Coroutine[typing.Any, typing.Any, AbstractRobustConnection]
@@ -124,26 +94,26 @@ class MelaConnection(SingletonResourceWrapper):
 class MelaBiDirectConnection(AbstractConfigurableComponent):
 
     def __init__(
-            self,
-            name: str,
-            parent: Optional[AbstractComponent],
-            config: Optional[BaseModelWithLogLevel],
+        self,
+        name: str,
+        parent: Optional[AbstractComponent],
+        config: Optional[BaseModelWithLogLevel],
     ):
         super().__init__(name, parent, config)
-        self._read: Optional[MelaConnection] = None
-        self._write: Optional[MelaConnection] = None
+        self._read: Optional[MelaConnectionWrapper] = None
+        self._write: Optional[MelaConnectionWrapper] = None
 
     @property
     def read(self):
         if not self._read:
-            self._read = MelaConnection('read', self, self._config)
+            self._read = MelaConnectionWrapper('read', self, self._config)
             self._read.setup()
         return self._read.acquire()
 
     @property
     def write(self):
         if not self._write:
-            self._write = MelaConnection('write', self, self._config)
+            self._write = MelaConnectionWrapper('write', self, self._config)
             self._write.setup()
         return self._write.acquire()
 
@@ -156,3 +126,37 @@ class MelaBiDirectConnection(AbstractConfigurableComponent):
         if self._write:
             self._write.shutdown()
         super(MelaBiDirectConnection, self).shutdown()
+
+
+class ExchangeSettings(BaseModelWithLogLevel):
+    name: str
+    connection_name: str = Field(alias="connection")
+    type: Union[ExchangeType, str] = ExchangeType.DIRECT
+
+
+class MelaExchange(SingletonResourceWrapper):
+    RESOURCE_CLASS: typing.Type = Exchange
+
+    def __init__(
+            self,
+            name: str,
+            parent: Optional[AbstractComponent],
+            config: Optional[BaseModelWithLogLevel],
+            channel: RobustChannel = None,
+    ):
+        super().__init__(name, parent, config)
+        self._channel = None
+        if channel:
+            self.set_channel(channel)
+
+    def _instantiate(self) -> RESOURCE_CLASS:
+        return self.RESOURCE_CLASS()
+
+    def set_channel(self, channel):
+        self._channel = channel
+
+    @property
+    def channel(self):
+        if not self._channel:
+            self._channel = self._get_connection().channel()
+        return self._channel
