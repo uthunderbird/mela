@@ -1,6 +1,22 @@
 import asyncio
-from typing import Tuple, Dict, Any, Union, Optional
+from typing import (
+    Tuple,
+    Dict,
+    Any,
+    Union,
+    Optional,
+    Callable,
+    Awaitable,
+)
 import envyaml
+
+from aio_pika.abc import (
+    AbstractChannel,
+    AbstractMessage,
+    AbstractExchange,
+    AbstractQueue
+)
+from aiormq.abc import ConfirmationFrameType
 
 from pydantic import (
     BaseModel,
@@ -90,7 +106,7 @@ class Settings(BaseSettings):
     connections: Dict[str, Union[ConnectionSettings, URLConnectionSettings]]
     services: Dict[str, ServiceSettings] = None
     consumers: Dict[str, ConsumerSettings] = None
-    publishers: Dict[str, PublisherSettings] = Field(default=None, alias="producers")  ## TODO DEPRECATE alias
+    publishers: Dict[str, PublisherSettings] = Field(default=None, alias="producers")  # TODO DEPRECATE alias
 
     class Config:
         yaml_file_path = 'application.yml'
@@ -112,8 +128,154 @@ class Settings(BaseSettings):
             )
 
 
+class MelaPublisher:
+
+    def __init__(
+            self,
+            name: str,
+            channel: Optional[AbstractChannel] = None,
+            settings: Optional[PublisherSettings] = None,
+            *,
+            exchange: Optional[AbstractExchange] = None,
+    ):
+        self.name: str = name
+        self.settings: Optional[PublisherSettings] = None
+        if settings:
+            self.set_settings(settings)
+        else:
+            pass
+
+    def set_settings(self, settings: Optional[PublisherSettings]):
+        self.settings = settings
+
+    # def gather_binds(self) -> BindMap:
+    #     pass
+    #
+    # def gather_network(self) -> NetworkMap:
+    #     pass
+
+    def set_processor(self, func: Callable):
+        pass
+
+    async def publish(self, message: AbstractMessage, routing_key: str = '') -> ConfirmationFrameType:
+        pass
+
+
+class MelaConsumer:
+
+    def __init__(
+            self,
+            name: str,
+            settings: Optional[PublisherSettings] = None,
+            *,
+            queue: Optional[AbstractQueue] = None,
+    ):
+        self.name: str = name
+        self.settings: Optional[PublisherSettings] = None
+        if settings:
+            self.set_settings(settings)
+        else:
+            pass
+
+
+class MelaService:
+
+    def __init__(
+            self,
+            name: str,
+            settings: Optional[ServiceSettings] = None,
+            *,
+            publisher: Optional[MelaPublisher] = None,
+            consumer: Optional[MelaConsumer] = None,
+    ):
+        self.name: str = name
+        self.settings: Optional[ServiceSettings] = None
+        if settings:
+            self.set_settings(settings)
+        else:
+            pass
+
+    def set_processor(self, func: Callable[[BaseModel], BaseModel]):
+        pass
+
+    def set_settings(self, settings: Optional[ServiceSettings]):
+        self.settings = settings
+
+    # def gather_binds(self) -> BindMap:
+    #     pass
+    #
+    # def gather_network(self) -> NetworkMap:
+    #     pass
+    #
+    # def gather_components(self) -> ComponentMap:
+    #     pass
+
+    @property
+    def consumer(self) -> MelaConsumer:
+        pass
+
+    @property
+    def publisher(self) -> MelaPublisher:
+        pass
+
+    def run(self, loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
+        pass
+
+    def get_runner(self) -> Callable:
+        """
+        Maybe it's better to use this way?
+        :return:
+        """
+
+
 class MelaScheme:
-    pass
+
+    """
+    Scheme is not runnable. It just declare relations between app components.
+    """
+
+    def __init__(
+            self,
+            name: str = None,
+            config: Optional[Settings] = None
+    ):
+        self.name: str = name
+        self._config: Optional[Settings] = None
+        if config:
+            self.set_config(config)
+
+    def set_config(self, config: Settings) -> None:
+        """
+        Set config of Mela Scheme.
+        """
+        pass
+
+    def service(self, name: str, settings: ServiceSettings) -> MelaService:
+        pass
+
+    # def rpc(self, name: str, settings: RPCSettings) -> MelaRPC:
+    #     pass
+
+    def publisher(self, name: str, settings: PublisherSettings) -> MelaPublisher:
+        pass
+
+    def consumer(self, name: str, settings: ConsumerSettings) -> MelaConsumer:
+        pass
+
+    # def register_component(self, component: MelaComponent) -> None:
+    #     pass
+
+    # def gather_network(self) -> NetworkMap:
+    #     pass
+
+    # def gather_binds(self) -> BindMap:
+    #     pass
+
+    # def gather_components(self) -> ComponentMap:
+    #     pass
+
+    def merge(self, other: 'MelaScheme') -> 'MelaScheme':
+        pass
 
 
 class Mela:
