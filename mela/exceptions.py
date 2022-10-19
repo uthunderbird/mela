@@ -2,5 +2,5 @@ class MelaException(RuntimeError):
     pass
 
 
-class ConfigError(MelaException):
+class ConfigError(KeyError):
     pass

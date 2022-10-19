@@ -12,6 +12,5 @@ services:
       routing_key: general-sentiment-q
       queue: general-sentiment-q
     publisher:
-      exchange: general-sentiment-topic-x
-      exchange_type: topic
-      routing_key: some.lol.key
+      exchange: general-sentiment-x
+      routing_key: general-sentiment-q
