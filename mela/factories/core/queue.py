@@ -10,4 +10,4 @@ async def declare_queue(settings: QueueParams, channel: AbstractChannel) -> Abst
     if settings.dead_letter_exchange:
         assert isinstance(settings.dead_letter_exchange, ExchangeParams)
         await declare_exchange(settings.dead_letter_exchange, channel)
-    return await channel.declare_queue(**settings.get_params_dict())
+    return await channel.declare_queue(**settings.get_params_dict(), timeout=10)

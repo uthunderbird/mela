@@ -4,7 +4,6 @@ import aio_pika
 from mela import Mela
 
 app = Mela(__name__)
-app.configure_from_yaml('application.yml')
 
 
 async def fetch(url):

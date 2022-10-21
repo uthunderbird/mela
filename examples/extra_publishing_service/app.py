@@ -1,27 +1,23 @@
+from pydantic import BaseModel, Field
 from mela import Mela
+from mela.components import Publisher
+from mela.settings import Settings
+
+
+class Document(BaseModel):
+    id_: int = Field(alias='id')
+
 
 app = Mela(__name__)
-app.read_config_yaml('application.yml')
+app.settings = Settings()
 
-logging_publisher = app.publisher()
-
-
-SPLITTER_SERVICE_NAME = "splitter"
+log_publisher: Publisher = app.publisher_instance('log')
 
 
-@app.service(SPLITTER_SERVICE_NAME)
-async def logger(body, message):
-    default_routing_key = app.services['splitter'].config['publisher']['routing_key']
-    i = 0
-    for obj in body:
-        if i % 2 == 0:
-            routing_key = default_routing_key
-        else:
-            routing_key = "test_queue2"
-        yield obj, {'routing_key': routing_key}
-        # Anyway, we should publish message into logging exchange
-        await logging_publisher.publish(obj, routing_key='.'.join([SPLITTER_SERVICE_NAME, routing_key]))
-        i += 1
+@app.service('extra_publishing')
+async def logger(body: Document):
+    await log_publisher.publish(body)
+    return body
 
 
 if __name__ == '__main__':

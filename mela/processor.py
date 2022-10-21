@@ -45,6 +45,8 @@ class Processor:
         self._input_class = input_class
         self._signature = self._get_typed_signature()
         self._params = self._get_typed_parameters()
+        if self._input_class is None:
+            self._get_data_class()
         self._select_solver()
 
     async def __process(self, *args, **kwargs):
@@ -55,24 +57,27 @@ class Processor:
         return await run_sync(func, *args)
 
     def call_sync(self, *args, **kwargs):
+        assert not self._is_coroutine()
         return self._call(*args, **kwargs)
 
     @staticmethod
-    def _wrap_response(
+    def wrap_response(
             result: Union[Dict, BaseModel, Message],
-            routing_key: str = None,
+            routing_key: Optional[str] = None,
     ) -> Tuple[Message, Optional[str]]:
         if isinstance(result, Message):
             return result, routing_key
-        if isinstance(result, dict):
+        elif isinstance(result, dict):
             return Message(json.dumps(result).encode()), routing_key
-        if isinstance(result, BaseModel):
-            return Message(result.json().encode()), routing_key
+        elif isinstance(result, BaseModel):
+            json_encoded = result.json(by_alias=True).encode()
+            return Message(json_encoded), routing_key
 
     async def process(self, message: AbstractIncomingMessage) -> Tuple[Message, Optional[str]]:
         solved_params = self._solve_dependencies(message)
         result = await self(**solved_params)
-        return self._wrap_response(*result)
+        wrapped_result = self.wrap_response(result)
+        return wrapped_result
 
     @staticmethod
     def _get_typed_annotation(param: inspect.Parameter, globalns: Dict[str, Any]) -> Any:
@@ -105,7 +110,7 @@ class Processor:
 
     def _have_no_annotations(self):
         for param in self._params:
-            if param.annotation is not None:
+            if param.annotation is not inspect.Parameter.empty:
                 return False
         return True
 
@@ -120,7 +125,7 @@ class Processor:
                         # Two different base classes found. We are not
                         # sure which should be used to parse message.
                         message_class_candidate = None
-                        break
+                        raise AssertionError("Two different data classes are found")
         self._input_class = message_class_candidate
         return self._input_class
 
@@ -131,7 +136,7 @@ class Processor:
         solved = {}
         assert self._input_class
         parsed_message = self._input_class.parse_raw(message.body)
-        parsed_message_dict = parsed_message.dict()
+        parsed_message_dict = parsed_message.dict(exclude_unset=True)
         for param in self._params:  # type: inspect.Parameter
             if param.annotation is IncomingMessage:
                 solved[param.name] = message
@@ -140,7 +145,7 @@ class Processor:
             elif param.name in parsed_message_dict:
                 solved[param.name] = parsed_message_dict[param.name]
             else:
-                raise KeyError(f"Key `{param.name}` cannot be solved")
+                raise KeyError(f"Key `{param.name}` cannot be solved by dataclass solver")
 
         return solved
 
@@ -156,7 +161,7 @@ class Processor:
             elif param.name in parsed_message:
                 solved[param.name] = parsed_message[param.name]
             else:
-                raise KeyError(f"Key `{param.name}` cannot be solved")
+                raise KeyError(f"Key `{param.name}` cannot be solved by JSON solver")
         return solved
 
     def _solve_dependencies_oldstyle(self, message: AbstractIncomingMessage) -> Dict[str, Any]:
@@ -178,13 +183,3 @@ class Processor:
             self._solve_dependencies = self._solve_dependencies_for_data_class
         else:
             self._solve_dependencies = self._solve_dependencies_for_raw_json
-
-
-if __name__ == '__main__':
-
-    def func_(a: str, b: str, message: IncomingMessage = None) -> bool:
-        return bool(a or b)
-
-    p = Processor(func_)
-
-    resp = asyncio.run(p(1, ""))

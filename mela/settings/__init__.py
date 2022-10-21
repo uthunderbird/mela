@@ -53,7 +53,7 @@ class ConnectionParams(AbstractConnectionParams):
     virtualhost: str = '/'
     ssl: bool = False
     ssl_options = dict
-    timeout: Optional[Union[float, int]] = Field(default=None, alias='connTimeout')
+    timeout: Optional[Union[float, int]] = None
     client_properties: Optional[Dict] = None
     heartbeat: Optional[int] = None
 
@@ -113,7 +113,7 @@ class QueueParams(BaseModel):
     def get_params_dict(self):
         arguments = {}
         if self.dead_letter_exchange:
-            arguments['x-dead-letter-exchange'] = self.dead_letter_exchange
+            arguments['x-dead-letter-exchange'] = self.dead_letter_exchange.name
             arguments['x-dead-letter-routing-key'] = self.dead_letter_routing_key
         return {
             'name': self.name,
@@ -124,9 +124,13 @@ class QueueParams(BaseModel):
             'arguments': arguments,
         }
 
+    def solve(self, settings: 'Settings'):
+        self.solve_dead_letter_exchange(settings.exchanges)
+
 
 class ComponentParamsBaseModel(BaseModel, abc.ABC):
     name: Optional[str] = None
+    log_level: Optional[str] = 'info'
 
     @abc.abstractmethod
     def solve(self, settings: 'Settings'):
@@ -179,6 +183,8 @@ class PublisherParams(ComponentParamsBaseModel):
         self.solve_exchange(settings.exchanges)
         if self.queue:
             self.solve_queue(settings.queues)
+            assert isinstance(self.queue, QueueParams)
+            self.queue.solve(settings)
         if parent_name and self.name is None:
             self.name = parent_name + '_publisher'
 
@@ -199,7 +205,7 @@ class ConsumerParams(ComponentParamsBaseModel):
     prefetch_count: int = 1
     dead_letter_exchange: Optional[str] = None
     dead_letter_routing_key: Optional[str] = None
-    requeue_broken_messages: bool = False
+    requeue_broken_messages: bool = True
 
     def solve_connection(
         self,
@@ -239,6 +245,8 @@ class ConsumerParams(ComponentParamsBaseModel):
         self.solve_connection(settings.connections)
         self.solve_exchange(settings.exchanges)
         self.solve_queue(settings.queues)
+        assert isinstance(self.queue, QueueParams)
+        self.queue.solve(settings)
         if parent_name and self.name is None:
             self.name = parent_name + '_consumer'
 
@@ -246,6 +254,7 @@ class ConsumerParams(ComponentParamsBaseModel):
         return {
             'name': self.name,
             'prefetch_count': self.prefetch_count,
+            'requeue_broken_messages': self.requeue_broken_messages,
         }
 
 
@@ -253,6 +262,7 @@ class ServiceParams(ComponentParamsBaseModel):
 
     consumer: Union[str, ConsumerParams]
     publisher: Union[str, PublisherParams]
+    requeue_broken_messages: Optional[bool] = None
 
     name: Optional[str] = None
 
@@ -261,6 +271,8 @@ class ServiceParams(ComponentParamsBaseModel):
             if self.consumer not in consumers:
                 raise KeyError(f"Consumer `{self.consumer}` is not declared")
             self.consumer = consumers[self.consumer]
+        if self.requeue_broken_messages is not None:
+            self.consumer.requeue_broken_messages = self.requeue_broken_messages
 
     def solve_publisher(self, publishers: Dict[str, PublisherParams]):
         if isinstance(self.publisher, str):
@@ -286,7 +298,7 @@ class Settings(BaseSettings):
     connections: Dict[str, Union[ConnectionParams, URLConnectionParams]] = {}
     services: Dict[str, ServiceParams] = {}
     consumers: Dict[str, ConsumerParams] = {}
-    publishers: Dict[str, PublisherParams] = Field(default={}, alias="producers")
+    publishers: Dict[str, PublisherParams] = {}
     exchanges: Dict[str, ExchangeParams] = {}
     queues: Dict[str, QueueParams] = {}
 
@@ -307,7 +319,7 @@ class Settings(BaseSettings):
     class Config:
         yaml_file_path = 'application.yml'
 
-        extra = Extra.forbid
+        extra = Extra.ignore
 
         @classmethod
         def customise_sources(

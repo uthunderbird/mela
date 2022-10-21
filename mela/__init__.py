@@ -1,10 +1,9 @@
 import asyncio
 from typing import Optional
-from typing import Union
 
-from .components import Consumer
-from .components import Service
+from .components.base import ConsumingComponent
 from .factories.core.connection import close_all_connections
+from .factories.publisher import publisher
 from .scheme import MelaScheme
 from .settings import Settings
 
@@ -25,6 +24,9 @@ class Mela(MelaScheme):
             loop = asyncio.get_event_loop()
         self._loop: Optional[asyncio.AbstractEventLoop] = loop
 
+    def publisher_instance(self, name):
+        return self._loop.run_until_complete(publisher(self.settings.publishers[name]))
+
     @property
     def settings(self):
         assert self._settings, "Mela is not configured"
@@ -38,13 +40,13 @@ class Mela(MelaScheme):
         """
         self._settings = value
 
-    def run(self, loop: Optional[asyncio.AbstractEventLoop] = None):
+    def run(self, coro=None, loop: Optional[asyncio.AbstractEventLoop] = None):
         if self._settings is None:
             self.settings = Settings()
         if loop is None:
             loop = self._loop
         assert loop
-        self._run_in_loop(loop)
+        self._run_in_loop(coro, loop)
 
     @staticmethod
     async def waiter():
@@ -54,16 +56,19 @@ class Mela(MelaScheme):
         finally:
             await close_all_connections()
 
-    def _run_in_loop(self, loop: asyncio.AbstractEventLoop):
+    def _run_in_loop(self, coro, loop: asyncio.AbstractEventLoop):
         assert self._settings
         for requirement_name, requirement in self.requirements.items():
             type_ = requirement.type_
-            instance: Union[Consumer, Service] = loop.run_until_complete(
+            instance: ConsumingComponent = loop.run_until_complete(
                 requirement.resolve(self._settings),
             )
             if type_ != 'publisher':
                 loop.run_until_complete(instance.consume())
-        loop.run_until_complete(self.waiter())
+        if coro:
+            loop.run_until_complete(coro)
+        else:
+            loop.run_until_complete(self.waiter())
 
     def register_scheme(self, scheme_: MelaScheme):
         self.merge(scheme_)

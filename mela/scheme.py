@@ -9,7 +9,7 @@ from typing import Type
 
 from pydantic import BaseModel
 
-from .components import Component
+from .components.base import Component
 from .factories import factory_dict
 from .processor import Processor
 from .settings import ComponentParamsBaseModel
@@ -62,7 +62,7 @@ class SchemeRequirement:
     async def resolve(self, settings: Settings):
         resolved = await self._resolve(settings)
         if self.processor:
-            resolved.set_callback(self.processor)
+            resolved.set_processor(self.processor)
         return resolved
 
     def set_processor(self, processor: Optional[Callable]):

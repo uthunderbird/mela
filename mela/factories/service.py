@@ -1,4 +1,4 @@
-from ..components import Service
+from ..components.service import Service
 from ..settings import ConsumerParams
 from ..settings import PublisherParams
 from ..settings import ServiceParams
