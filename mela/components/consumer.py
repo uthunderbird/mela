@@ -54,7 +54,11 @@ class Consumer(ConsumingComponent):
     def set_queue(self, queue: AbstractQueue):
         self._queue = queue
 
+    def get_queue_name(self) -> str:
+        return self._queue.name
+
     def set_processor(self, processor: Processor):
+        self._processor = processor
 
         async def wrapper(message: AbstractIncomingMessage):
             try:

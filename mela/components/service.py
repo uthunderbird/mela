@@ -29,6 +29,7 @@ class Service(ConsumingComponent):
             self.publisher = publisher
 
     def set_processor(self, processor: Processor):
+        self._processor = processor
 
         async def on_message(message: AbstractIncomingMessage) -> None:
             try:

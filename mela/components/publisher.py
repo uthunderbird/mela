@@ -8,11 +8,12 @@ from aio_pika.abc import AbstractMessage
 from aiormq.abc import ConfirmationFrameType
 from pydantic import BaseModel
 
+from ..abc import AbstractPublisher
 from mela.components.base import Component
 from mela.processor import Processor
 
 
-class Publisher(Component):
+class Publisher(Component, AbstractPublisher):
 
     def __init__(
             self,

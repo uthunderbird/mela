@@ -12,7 +12,7 @@ async def fetch(url):
     return url
 
 
-@app.rpc_server("fetcher")
+@app.rpc_service("fetcher")
 async def fetcher(link, message):
     return await fetch(link)
 

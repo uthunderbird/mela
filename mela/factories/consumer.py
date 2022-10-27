@@ -28,3 +28,17 @@ async def consumer(settings: ConsumerParams) -> Consumer:
         instance = Consumer(**settings.get_params_dict(), queue=queue)
         consumers[settings.name] = instance
     return consumers[settings.name]
+
+
+async def anonymous_consumer(settings: ConsumerParams) -> Consumer:
+    assert isinstance(settings.connection, AbstractConnectionParams)
+    connection = await connect(settings.name, settings.connection, 'r')
+    channel = await connection.channel()
+    await channel.set_qos(1)
+    settings.queue = QueueParams(name="", durable=False, auto_delete=True, exclusive=True)
+    queue = await declare_queue(settings.queue, await connection.channel())
+    assert isinstance(settings.exchange, ExchangeParams)
+    exchange = await declare_exchange(settings.exchange, channel)
+    await queue.bind(exchange, routing_key=queue.name)
+    instance = Consumer(**settings.get_params_dict(), queue=queue)
+    return instance

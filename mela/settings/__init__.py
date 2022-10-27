@@ -293,6 +293,84 @@ class ServiceParams(ComponentParamsBaseModel):
         return {}
 
 
+class RPCParams(ComponentParamsBaseModel):
+    connection: Union[str, ConnectionParams, URLConnectionParams] = 'default'
+    worker: Optional[ConsumerParams] = None
+    response_publisher: Optional[PublisherParams] = None
+    request_publisher: Optional[PublisherParams] = None
+
+    dead_letter_exchange: Optional[str] = None
+    dead_letter_routing_key: Optional[str] = None
+
+    exchange: Union[str, ExchangeParams]
+    routing_key: str
+    queue: Union[str, QueueParams]
+    response_exchange: Union[str, ExchangeParams]
+
+    def solve_connection(
+        self,
+        connections: Dict[str, Union[ConnectionParams, URLConnectionParams]],
+    ) -> None:
+        if isinstance(self.connection, str):
+            if self.connection not in connections:
+                raise KeyError(f"Connection `{self.connection}` is not described in config")
+            self.connection = connections[self.connection]
+
+    def solve_exchanges(self, exchanges: Dict[str, ExchangeParams]) -> None:
+        if isinstance(self.exchange, str):
+            exchange = exchanges.get(self.exchange)
+            if not exchange:
+                exchange = ExchangeParams(name=self.exchange)
+            self.exchange = exchange
+        if isinstance(self.response_exchange, str):
+            exchange = exchanges.get(self.response_exchange)
+            if not exchange:
+                exchange = ExchangeParams(name=self.response_exchange)
+            self.response_exchange = exchange
+
+    def solve_queue(self, queues: Dict[str, QueueParams]):
+        if isinstance(self.queue, str):
+            queue = queues.get(self.queue)
+            if queue is None:
+                queue = QueueParams(
+                    name=self.queue,
+                    dead_letter_exchange=self.dead_letter_exchange,
+                    dead_letter_routing_key=self.dead_letter_routing_key,
+                )
+                queues[self.queue] = queue
+            self.queue = queue
+
+    def solve(self, settings: 'Settings'):
+        self.solve_connection(settings.connections)
+        self.solve_exchanges(settings.exchanges)
+        self.solve_queue(settings.queues)
+        if self.worker is None:
+            self.worker = ConsumerParams(
+                name=self.name + '_service',
+                connection=self.connection,
+                exchange=self.exchange,
+                routing_key=self.routing_key,
+                queue=self.queue,
+            )
+        if self.response_publisher is None:
+            self.response_publisher = PublisherParams(
+                name=self.name + '_response_publisher',
+                connection=self.connection,
+                exchange=self.response_exchange,
+                routing_key='',
+            )
+        if self.request_publisher is None:
+            self.request_publisher = PublisherParams(
+                name=self.name + '_request_publisher',
+                connection=self.connection,
+                exchange=self.exchange,
+                routing_key=self.routing_key,
+            )
+
+    def get_params_dict(self) -> Dict:
+        pass
+
+
 class Settings(BaseSettings):
 
     connections: Dict[str, Union[ConnectionParams, URLConnectionParams]] = {}
@@ -301,11 +379,15 @@ class Settings(BaseSettings):
     publishers: Dict[str, PublisherParams] = {}
     exchanges: Dict[str, ExchangeParams] = {}
     queues: Dict[str, QueueParams] = {}
+    rpc_services: Dict[str, RPCParams] = Field(default_factory=dict, alias='rpc-services')
 
     def __init__(self, **values: Any):
         super().__init__(**values)
         for connection_name, connection in self.connections.items():
             connection.name = connection_name
+        for rpc_name, rpc_config in self.rpc_services.items():
+            rpc_config.name = rpc_name
+            rpc_config.solve(self)
         for service_name, service_config in self.services.items():
             service_config.name = service_name
             service_config.solve(self, deep=True)

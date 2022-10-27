@@ -1,6 +1,7 @@
 import asyncio
 from typing import Optional
 
+from .components.base import Component
 from .components.base import ConsumingComponent
 from .factories.core.connection import close_all_connections
 from .factories.publisher import publisher
@@ -24,8 +25,11 @@ class Mela(MelaScheme):
             loop = asyncio.get_event_loop()
         self._loop: Optional[asyncio.AbstractEventLoop] = loop
 
-    def publisher_instance(self, name):
-        return self._loop.run_until_complete(publisher(self.settings.publishers[name]))
+    def publisher_sync(self, name):
+        return self._loop.run_until_complete(self.publisher_instance(name))
+
+    async def publisher_instance(self, name):
+        return await publisher(self.settings.publishers[name])
 
     @property
     def settings(self):
@@ -59,11 +63,11 @@ class Mela(MelaScheme):
     def _run_in_loop(self, coro, loop: asyncio.AbstractEventLoop):
         assert self._settings
         for requirement_name, requirement in self.requirements.items():
-            type_ = requirement.type_
-            instance: ConsumingComponent = loop.run_until_complete(
+            instance: Component = loop.run_until_complete(
                 requirement.resolve(self._settings),
             )
-            if type_ != 'publisher':
+            if isinstance(instance, ConsumingComponent):
+                loop.run_until_complete(instance.prepare_processor(self, self.settings))
                 loop.run_until_complete(instance.consume())
         if coro:
             loop.run_until_complete(coro)

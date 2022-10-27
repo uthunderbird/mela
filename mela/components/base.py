@@ -1,12 +1,14 @@
 import abc
+import asyncio
 import logging
 from typing import Optional
 
 
 class Component(abc.ABC):
 
-    def __init__(self, name, log_level=None):
+    def __init__(self, name, log_level=None, loop=None):
         self.name = name
+        self.loop = loop
         self.log = None
         if log_level is not None:
             self.config_logger(log_level)
@@ -18,6 +20,14 @@ class Component(abc.ABC):
 
 class ConsumingComponent(Component, abc.ABC):
 
+    def __init__(self, name, log_level: str = None, loop: asyncio.AbstractEventLoop = None):
+        super().__init__(name, log_level, loop)
+        self._processor = None
+
+    @abc.abstractmethod
+    def set_processor(self, processor):
+        raise NotImplementedError()
+
     @abc.abstractmethod
     async def consume(self, **kwargs) -> str:
         raise NotImplementedError()
@@ -25,3 +35,8 @@ class ConsumingComponent(Component, abc.ABC):
     @abc.abstractmethod
     async def cancel(self, timeout: Optional[int] = None, nowait: bool = False):
         raise NotImplementedError()
+
+    async def prepare_processor(self, scheme, settings):
+        if self._processor:
+            self._processor.cache_static_params(self, scheme)
+            await self._processor.solve_requirements(settings)
