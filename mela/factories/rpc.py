@@ -47,4 +47,5 @@ async def client(settings: RPCParams) -> 'RPCClient':
         request_publisher=request_publisher_instance,
         response_consumer=response_consumer_instance,
     )
+    await instance.consume()
     return instance

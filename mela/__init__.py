@@ -5,6 +5,7 @@ from .components.base import Component
 from .components.base import ConsumingComponent
 from .factories.core.connection import close_all_connections
 from .factories.publisher import publisher
+from .factories.rpc import client as rpc_client
 from .scheme import MelaScheme
 from .settings import Settings
 
@@ -30,6 +31,9 @@ class Mela(MelaScheme):
 
     async def publisher_instance(self, name):
         return await publisher(self.settings.publishers[name])
+
+    async def rpc_client_instance(self, name):
+        return await rpc_client(self.settings.rpc_services[name])
 
     @property
     def settings(self):

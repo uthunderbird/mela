@@ -50,7 +50,7 @@ class Publisher(Component, AbstractPublisher):
 
     async def publish(
             self,
-            message: Union[Dict, BaseModel, Message],
+            message: Union[Dict, BaseModel, AbstractMessage],
             routing_key: Optional[str] = None,
     ):
         message, routing_key = Processor.wrap_response(message, routing_key)

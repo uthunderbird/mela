@@ -13,8 +13,8 @@ async def fetch(url):
 
 
 @app.rpc_service("fetcher")
-async def fetcher(link, message):
-    return await fetch(link)
+async def fetcher(url: str):
+    return {"fetched": await fetch(url)}
 
 
 bots = {}

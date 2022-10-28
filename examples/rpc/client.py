@@ -5,19 +5,19 @@ from mela import Mela
 app = Mela(__name__)
 
 
-fetcher = app.rpc_client("fetcher")
-
-bot_manager = app.rpc_client("bot_manager")
-
-
 async def main():
     # RPC calls over RabbitMQ never were simpler!
-    res = await fetcher.call({'asdf': 5, 'lol': [3, 8, ["haha", "wow"]]})
-    # res
+
+    fetcher = await app.rpc_client_instance("fetcher")
+
+    bot_manager = await app.rpc_client_instance("bot_manager")
+
+    res = await fetcher.call({'url': "test"})
+    print(res)
 
     # we can even gather call results!
-    g = await asyncio.gather(fetcher.call(url1), fetcher.call(url2))
-    # g
+    g = await asyncio.gather(fetcher.call({'url': url1}), fetcher.call({'url': url2}))
+    print(g)
 
     create_bot_result = await bot_manager.call({
         'bot_id': 1,
@@ -26,13 +26,13 @@ async def main():
     },
         headers={'method': 'create_bot'},
     )
-    # create_bot result {create_bot_result}
+    print(f"create_bot result {create_bot_result}")
 
     get_bot_result = await bot_manager.call({'bot_id': 1}, headers={'method': 'get_bot'})
-    # get_bot_result {get_bot_result}
+    print(f"get_bot_result {get_bot_result}")
 
     unknown_method_result = await bot_manager.call({'bot_id': 4}, headers={'method': 'getBot'})
-    # unknown method result: {unknown_method_result}
+    print(f"unknown method result: {unknown_method_result}")
 
 
 if __name__ == '__main__':
@@ -45,3 +45,4 @@ if __name__ == '__main__':
         'hozyaystv-naschityvaetsya-v-kazahstane_a3896073'
     )
     app.run(main())
+    app.run()

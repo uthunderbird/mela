@@ -10,6 +10,8 @@ class Component(abc.ABC):
 
     def __init__(self, name, log_level=None, loop=None):
         self.name = name
+        if loop is None:
+            loop = asyncio.get_running_loop()
         self.loop = loop
         self.log = None
         if log_level is not None:

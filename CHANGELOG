@@ -5,6 +5,8 @@ Add ABC to prevent circular import hell
 
 UPCOMING
 Add missing requirement, anyio
+Fix bug with subclasses injection in static params
+Fix bug in RPC client implementation
 
 
 v 1.1.0a1

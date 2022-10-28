@@ -113,16 +113,19 @@ class RPCClient(ConsumingComponent, AbstractRPCClient):
     def _generate_correlation_id():
         return str(uuid4())
 
-    async def call(self, body: Union[AbstractMessage, BaseModel, dict]):
+    async def call(self, body: Union[AbstractMessage, BaseModel, dict], headers=None):
         assert self._consuming.locked(), "Consumer is not active"
         message, _ = Processor.wrap_response(body)
         message.correlation_id = self._generate_correlation_id()
         message.reply_to = self._response_consumer.get_queue_name()
+        if headers is not None:
+            assert isinstance(headers, dict)
+            message.headers.update(headers)
 
         future = self.loop.create_future()
         self._futures[message.correlation_id] = future
 
-        await self._request_publisher.publish_message(body)
+        await self._request_publisher.publish_message(message)
 
         return await future
 
@@ -138,12 +141,12 @@ class RPCClient(ConsumingComponent, AbstractRPCClient):
                 parsed_response = loads(message.body)
             future: Future = self._futures.pop(message.correlation_id, None)
             if future is not None:
-                future.set_result((parsed_response, message))
+                future.set_result(parsed_response)
 
         self._response_consumer.set_callback(on_message)
 
     async def consume(self, **kwargs) -> str:
-        await self._prepare_callback()
+        self._prepare_callback()
         await self._consuming.acquire()
         return await self._response_consumer.consume(**kwargs)
 
