@@ -1,2 +1,2 @@
-aio-pika==6.8.0
-envyaml==1.6.210210
+aio-pika==8.2.2
+envyaml==1.10.211231

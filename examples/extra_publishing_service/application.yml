@@ -6,7 +6,7 @@ connections:
     password: admin
 
 services:
-  splitter:
+  extra_publishing:
     consumer:
       exchange: general-sentiment-x
       routing_key: general-sentiment-q
@@ -16,7 +16,7 @@ services:
       routing_key: test_queue
 
 publishers:
-  default:
+  log:
     exchange: log-x
     exchange_type: topic
     routing_key: splitter.test_queue

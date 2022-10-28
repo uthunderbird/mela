@@ -6,11 +6,11 @@ connections:
     password: admin
 
 services:
-  splitter:
+  printer:
     consumer:
       exchange: general-sentiment-x
       routing_key: general-sentiment-q
       queue: general-sentiment-q
     publisher:
-      exchange: test-x
-      routing_key: test_queue
+      exchange: general-sentiment-x
+      routing_key: general-sentiment-q

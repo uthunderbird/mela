@@ -1,30 +1,24 @@
 connections:
   input_connection:
-    host: ${RABBIT_INPUT_HOST}
-    port: 5672
-    username: rabbitmq-bridge
-    password: rabbitmq-bridge
-    connTimeout: 1000
-    heartbeat: 360
+    host: $RABBIT_INPUT_HOST
+    port: ${RABBIT_INPUT_PORT|5672}
+    username: ${RABBIT_INPUT_USERNAME|rabbitmq-bridge}
+    password: ${RABBIT_INPUT_PASSWORD|rabbitmq-bridge}
   output_connection:
-    host: ${RABBIT_OUTPUT_HOST}
-    port: 5672
-    username: rabbitmq-bridge
-    password: rabbitmq-bridge
-    connTimeout: 1000
-    heartbeat: 360
+    host: $RABBIT_OUTPUT_HOST
+    port: ${RABBIT_OUTPUT_PORT|5672}
+    username: ${RABBIT_OUTPUT_USERNAME|rabbitmq-bridge}
+    password: ${RABBIT_OUTPUT_PASSWORD|rabbitmq-bridge}
 
-consumers:
-  input:
-    connection: input_connection
-    prefetch_count: 100
-    routing_key: general-sentiment-q
-    exchange: general-sentiment-x
-    queue: general-sentiment-temp-q
-    decode: json
-
-producers:
-  output:
-    connection: output_connection
-    routing_key: general-sentiment-q
-    exchange: general-sentiment-x
+services:
+  bridge:
+    consumer:
+      connection: input_connection
+      prefetch_count: ${RABBIT_INPUT_PREFETCH_COUNT|1}
+      routing_key: ${RABBIT_INPUT_ROUTING_KEY}
+      exchange: ${RABBIT_INPUT_EXCHANGE}
+      queue: ${RABBIT_INPUT_QUEUE}
+    producer:
+      connection: output_connection
+      routing_key: ${RABBIT_OUTPUT_ROUTING_KEY}
+      exchange: ${RABBIT_OUTPUT_EXCHANGE}

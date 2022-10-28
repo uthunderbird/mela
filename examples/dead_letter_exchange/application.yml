@@ -6,7 +6,7 @@ connections:
     password: admin
 
 services:
-  printer:
+  service_with_dlx:
     consumer:
       exchange: dlx-test-x
       routing_key: dlx-test-k

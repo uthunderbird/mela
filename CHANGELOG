@@ -1,5 +1,12 @@
-UPCOMING
-pass
+TODO
+Policies declaration via app config (https://www.rabbitmq.com/parameters.html)
+Run separate service/consumer as worker
+Add ABC to prevent circular import hell
+
+v 1.1.0a1
+Pydantic based app settings
+Inject arguments to endpoints based on type annotations (FastAPI-like)
+Inject logger or other components
 
 v 1.0.11
 Make it possible to just register endpoints, without running loop (method `Mela.setup()`)
