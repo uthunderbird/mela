@@ -20,3 +20,4 @@ publishers:
     exchange: log-x
     exchange_type: topic
     routing_key: splitter.test_queue
+    queue: log-q

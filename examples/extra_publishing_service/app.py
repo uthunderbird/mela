@@ -1,23 +1,26 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
+
 from mela import Mela
 from mela.components import Publisher
-from mela.settings import Settings
 
 
 class Document(BaseModel):
-    id_: int = Field(alias='id')
+
+    text: str
+    url: str
+    likes_count: int = Field(alias='likesCount')
+    date: datetime
 
 
 app = Mela(__name__)
-app.settings = Settings()
-
-log_publisher: Publisher = app.publisher_instance('log')
 
 
 @app.service('extra_publishing')
-async def logger(body: Document):
-    await log_publisher.publish(body)
-    return body
+async def logger(document: Document, extra_publisher: Publisher = 'log'):
+    await extra_publisher.publish(document)
+    return document
 
 
 if __name__ == '__main__':

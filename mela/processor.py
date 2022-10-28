@@ -93,9 +93,15 @@ class Processor:
         assert not self._is_coroutine()
         return self._call(*args, **kwargs)
 
+    def _static_param_classes_with_subclasses(self):
+        all_subclasses = []
+        for klass in self.static_param_classes:
+            all_subclasses.extend(klass.__subclasses__())
+        return self.static_param_classes + all_subclasses
+
     def _split_static_and_dynamic_params(self):
         for param in self._params:  # type: inspect.Parameter
-            if param.annotation in self.static_param_classes:
+            if param.annotation in self._static_param_classes_with_subclasses():
                 self._static_params.append(param)
                 self._have_static_params = True
             else:
@@ -108,11 +114,11 @@ class Processor:
     ) -> Tuple[Message, Optional[str]]:
         if isinstance(result, Message):
             return result, routing_key
-        elif isinstance(result, dict):
-            return Message(json.dumps(result).encode()), routing_key
         elif isinstance(result, BaseModel):
             json_encoded = result.json(by_alias=True).encode()
             return Message(json_encoded), routing_key
+        elif isinstance(result, dict):
+            return Message(json.dumps(result).encode()), routing_key
 
     async def process(self, message: AbstractIncomingMessage) -> Tuple[Message, Optional[str]]:
         solved_params = self._solve_dependencies(message)
@@ -217,7 +223,7 @@ class Processor:
     def _solve_dependencies_oldstyle(self, message: AbstractIncomingMessage) -> Dict[str, Any]:
         solved = {}
         parsed_message = json.loads(message.body)
-        for i, param in enumerate(self._dynamic_params):
+        for i, param in enumerate(self._params):
             if i == 0:
                 solved[param.name] = parsed_message
             elif i == 1:

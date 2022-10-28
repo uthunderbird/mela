@@ -62,7 +62,7 @@ class Mela(MelaScheme):
 
     def _run_in_loop(self, coro, loop: asyncio.AbstractEventLoop):
         assert self._settings
-        for requirement_name, requirement in self.requirements.items():
+        for requirement_name, requirement in list(self.requirements.items()):
             instance: Component = loop.run_until_complete(
                 requirement.resolve(self._settings),
             )
