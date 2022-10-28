@@ -3,6 +3,8 @@ import asyncio
 import logging
 from typing import Optional
 
+from ..log import handler
+
 
 class Component(abc.ABC):
 
@@ -15,6 +17,7 @@ class Component(abc.ABC):
 
     def config_logger(self, level: str):
         self.log = logging.getLogger(self.name)
+        self.log.addHandler(handler)
         self.log.setLevel(level.upper())
 
 

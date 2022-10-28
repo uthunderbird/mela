@@ -255,6 +255,7 @@ class ConsumerParams(ComponentParamsBaseModel):
             'name': self.name,
             'prefetch_count': self.prefetch_count,
             'requeue_broken_messages': self.requeue_broken_messages,
+            'log_level': self.log_level
         }
 
 
@@ -290,7 +291,10 @@ class ServiceParams(ComponentParamsBaseModel):
             self.publisher.solve(settings, parent_name=self.name)
 
     def get_params_dict(self) -> Dict:
-        return {}
+        return {
+            'log_level': self.log_level,
+            'name': self.name
+        }
 
 
 class RPCParams(ComponentParamsBaseModel):

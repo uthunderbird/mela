@@ -7,6 +7,7 @@ connections:
 
 services:
   printer:
+    log_level: info
     consumer:
       exchange: general-sentiment-x
       routing_key: general-sentiment-q
