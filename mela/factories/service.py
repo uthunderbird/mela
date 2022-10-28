@@ -12,5 +12,9 @@ async def service(settings: ServiceParams) -> 'Service':
     assert settings.name
     publisher_instance = await publisher(settings.publisher)
     consumer_instance = await consumer(settings.consumer)
-    instance = Service(publisher=publisher_instance, consumer=consumer_instance, **settings.get_params_dict())
+    instance = Service(
+        publisher=publisher_instance,
+        consumer=consumer_instance,
+        **settings.get_params_dict(),
+    )
     return instance

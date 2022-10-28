@@ -3,9 +3,9 @@ from typing import Dict
 
 from .consumer import consumer
 from .publisher import publisher
-from .service import service
 from .rpc import client as rpc_client
 from .rpc import service as rpc_service
+from .service import service
 
 
 factory_dict: Dict[str, Any] = {

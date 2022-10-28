@@ -1,11 +1,18 @@
 import warnings
-from typing import Dict, Optional, Type, Callable, Any
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Optional
+from typing import Type
 
 from pydantic import BaseModel
 
-from mela.processor import Processor
+from ..processor import Processor
+from ..settings import ConsumerParams
+from ..settings import PublisherParams
+from ..settings import RPCParams
+from ..settings import ServiceParams
 from .requirement import SchemeRequirement
-from mela.settings import ServiceParams, PublisherParams, ConsumerParams, RPCParams
 
 
 class MelaScheme:

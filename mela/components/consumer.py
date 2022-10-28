@@ -55,6 +55,7 @@ class Consumer(ConsumingComponent):
         self._queue = queue
 
     def get_queue_name(self) -> str:
+        assert self._queue
         return self._queue.name
 
     def set_processor(self, processor: Processor):

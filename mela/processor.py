@@ -53,10 +53,10 @@ class Processor:
         self._input_class = input_class
         self._signature = self._get_typed_signature()
         self._params = self._get_typed_parameters()
-        self._static_params = []
-        self._dynamic_params = []
+        self._static_params: Iterable[inspect.Parameter] = []
+        self._dynamic_params: Iterable[inspect.Parameter] = []
         self._split_static_and_dynamic_params()
-        self._cached_static_params = {}
+        self._cached_static_params: Dict[str, Any] = {}
         if self._input_class is None:
             self._get_data_class()
         self._select_solver()
@@ -159,8 +159,7 @@ class Processor:
         params = list(self._params)
         if (
                 params[0].annotation is inspect.Parameter.empty
-                or
-                params[0].annotation is dict
+                or params[0].annotation is dict
         ) and issubclass(params[1].annotation, AbstractMessage):
             return True
         return False
@@ -231,7 +230,8 @@ class Processor:
         if len(list(self._params)) == 2 and (
                 self._have_no_annotations() or self._oldstyle_annotations()
         ):
-            warn("Oldstyle injections are deprecated. Update your processor definition", DeprecationWarning)
+            warn("Oldstyle injections are deprecated. "
+                 "Update your processor definition", DeprecationWarning)
             self._solve_dependencies = self._solve_dependencies_oldstyle
         elif self._input_class:
             self._solve_dependencies = self._solve_dependencies_for_data_class

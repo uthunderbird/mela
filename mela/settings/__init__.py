@@ -130,7 +130,7 @@ class QueueParams(BaseModel):
 
 class ComponentParamsBaseModel(BaseModel, abc.ABC):
     name: Optional[str] = None
-    log_level: Optional[str] = 'info'
+    log_level: str = 'info'
 
     @abc.abstractmethod
     def solve(self, settings: 'Settings'):
@@ -255,7 +255,7 @@ class ConsumerParams(ComponentParamsBaseModel):
             'name': self.name,
             'prefetch_count': self.prefetch_count,
             'requeue_broken_messages': self.requeue_broken_messages,
-            'log_level': self.log_level
+            'log_level': self.log_level,
         }
 
 
@@ -293,7 +293,7 @@ class ServiceParams(ComponentParamsBaseModel):
     def get_params_dict(self) -> Dict:
         return {
             'log_level': self.log_level,
-            'name': self.name
+            'name': self.name,
         }
 
 
@@ -348,6 +348,7 @@ class RPCParams(ComponentParamsBaseModel):
         self.solve_connection(settings.connections)
         self.solve_exchanges(settings.exchanges)
         self.solve_queue(settings.queues)
+        assert self.name
         if self.worker is None:
             self.worker = ConsumerParams(
                 name=self.name + '_service',

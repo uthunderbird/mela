@@ -1,8 +1,11 @@
-from typing import Literal, Optional, Callable, Awaitable, Mapping
+from typing import Callable
+from typing import Literal
+from typing import Mapping
+from typing import Optional
 
 from ..abc import AbstractSchemeRequirement
-from mela.factories import factory_dict
-from mela.settings import ComponentParamsBaseModel
+from ..factories import factory_dict
+from ..settings import ComponentParamsBaseModel
 
 
 class SchemeRequirement(AbstractSchemeRequirement):

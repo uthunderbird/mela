@@ -1,7 +1,6 @@
 from asyncio import AbstractEventLoop
 from asyncio import Future
 from asyncio import Lock
-
 from json import JSONDecodeError
 from json import loads
 from typing import Optional
@@ -13,12 +12,12 @@ from aio_pika.abc import AbstractIncomingMessage
 from aio_pika.abc import AbstractMessage
 from pydantic import BaseModel
 
+from ..abc import AbstractRPCClient
+from ..processor import Processor
 from . import Consumer
 from . import Publisher
 from .base import ConsumingComponent
 from .exceptions import NackMessageError
-from ..abc import AbstractRPCClient
-from ..processor import Processor
 
 
 class RPC(ConsumingComponent):
@@ -50,7 +49,10 @@ class RPC(ConsumingComponent):
             try:
                 outgoing_message, _ = await processor.process(message)
                 outgoing_message.correlation_id = message.correlation_id
-                await self._response_publisher.publish_message(outgoing_message, routing_key=message.reply_to)
+                await self._response_publisher.publish_message(
+                    outgoing_message,
+                    routing_key=message.reply_to,
+                )
             except NackMessageError as e:
                 await message.nack(requeue=e.requeue)
                 self.log.exception("Message is Nacked:")

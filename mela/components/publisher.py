@@ -9,8 +9,8 @@ from aiormq.abc import ConfirmationFrameType
 from pydantic import BaseModel
 
 from ..abc import AbstractPublisher
-from mela.components.base import Component
-from mela.processor import Processor
+from ..components.base import Component
+from ..processor import Processor
 
 
 class Publisher(Component, AbstractPublisher):

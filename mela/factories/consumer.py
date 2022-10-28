@@ -32,6 +32,7 @@ async def consumer(settings: ConsumerParams) -> Consumer:
 
 async def anonymous_consumer(settings: ConsumerParams) -> Consumer:
     assert isinstance(settings.connection, AbstractConnectionParams)
+    assert settings.name
     connection = await connect(settings.name, settings.connection, 'r')
     channel = await connection.channel()
     await channel.set_qos(1)
