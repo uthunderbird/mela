@@ -3,6 +3,9 @@ Policies declaration via app config (https://www.rabbitmq.com/parameters.html)
 Run separate service/consumer as worker
 Add ABC to prevent circular import hell
 
+1.1.0a6
+Fix message acknowledgement in RPC client
+
 1.1.0a5
 Fix `prefetch_count` passing up to consumers
 

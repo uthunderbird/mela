@@ -133,6 +133,7 @@ class RPCClient(ConsumingComponent, AbstractRPCClient):
 
         async def on_message(message: AbstractIncomingMessage) -> None:
             if message.correlation_id is None:
+                await message.nack(requeue=False)
                 raise KeyError("Message without correlation id")
 
             if self._response_model:
@@ -142,6 +143,7 @@ class RPCClient(ConsumingComponent, AbstractRPCClient):
             future: Future = self._futures.pop(message.correlation_id, None)
             if future is not None:
                 future.set_result(parsed_response)
+            await message.ack()
 
         self._response_consumer.set_callback(on_message)
 
