@@ -3,6 +3,12 @@ Policies declaration via app config (https://www.rabbitmq.com/parameters.html)
 Run separate service/consumer as worker
 Add ABC to prevent circular import hell
 
+1.1.0a5
+Fix `prefetch_count` passing up to consumers
+
+1.1.0a4
+Fix missing requirement
+
 1.1.0a3
 Fix missing component type in dependency resolver
 

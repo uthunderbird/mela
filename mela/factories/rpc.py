@@ -30,6 +30,7 @@ async def client(settings: RPCParams) -> 'RPCClient':
     assert isinstance(settings.request_publisher, PublisherParams)
     assert isinstance(settings.response_publisher, PublisherParams)
     assert settings.name
+    settings.request_publisher.skip_unroutables = True
     request_publisher_instance = await publisher(settings.request_publisher)
 
     consumer_params = ConsumerParams(

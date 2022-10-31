@@ -311,6 +311,8 @@ class RPCParams(ComponentParamsBaseModel):
     queue: Union[str, QueueParams]
     response_exchange: Union[str, ExchangeParams]
 
+    prefetch_count: int = 1
+
     def solve_connection(
         self,
         connections: Dict[str, Union[ConnectionParams, URLConnectionParams]],
@@ -356,6 +358,7 @@ class RPCParams(ComponentParamsBaseModel):
                 exchange=self.exchange,
                 routing_key=self.routing_key,
                 queue=self.queue,
+                prefetch_count=self.prefetch_count,
             )
         if self.response_publisher is None:
             self.response_publisher = PublisherParams(

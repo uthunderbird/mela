@@ -18,7 +18,7 @@ async def publisher(settings: PublisherParams) -> Publisher:
     if settings.name not in publishers:
         assert isinstance(settings.connection, AbstractConnectionParams)
         connection = await connect(settings.name, settings.connection, 'w')
-        channel = await connection.channel()
+        channel = await connection.channel(publisher_confirms=(not settings.skip_unroutables))
         assert isinstance(settings.exchange, ExchangeParams)
         exchange = await declare_exchange(settings.exchange, channel)
         if settings.queue:
