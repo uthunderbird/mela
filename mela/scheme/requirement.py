@@ -35,7 +35,7 @@ class SchemeRequirement(AbstractSchemeRequirement):
             registry = settings.consumers
         elif self.type_ == 'service':
             registry = settings.services
-        elif self.type_ == 'rpc_service':
+        elif self.type_ in ('rpc_service', 'rpc_client'):
             registry = settings.rpc_services
         else:
             raise NotImplementedError(f"Unknown component type: `{self.type_}`")

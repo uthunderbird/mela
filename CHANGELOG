@@ -3,11 +3,13 @@ Policies declaration via app config (https://www.rabbitmq.com/parameters.html)
 Run separate service/consumer as worker
 Add ABC to prevent circular import hell
 
-UPCOMING
+1.1.0a3
+Fix missing component type in dependency resolver
+
+v 1.1.0a2
 Add missing requirement, anyio
 Fix bug with subclasses injection in static params
 Fix bug in RPC client implementation
-
 
 v 1.1.0a1
 Pydantic based app settings
