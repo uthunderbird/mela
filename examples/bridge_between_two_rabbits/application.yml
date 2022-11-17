@@ -18,7 +18,7 @@ services:
       routing_key: ${RABBIT_INPUT_ROUTING_KEY}
       exchange: ${RABBIT_INPUT_EXCHANGE}
       queue: ${RABBIT_INPUT_QUEUE}
-    producer:
+    publisher:
       connection: output_connection
       routing_key: ${RABBIT_OUTPUT_ROUTING_KEY}
       exchange: ${RABBIT_OUTPUT_EXCHANGE}

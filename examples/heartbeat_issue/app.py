@@ -3,8 +3,8 @@ from mela import Mela
 app = Mela(__name__)
 
 
-@app.service("bridge")
-async def serve(body, message):
+@app.service("printer")
+def printer(body, message):
     print(body)
     return body
 

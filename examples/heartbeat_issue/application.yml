@@ -1,0 +1,18 @@
+connections:
+  default:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+    heartbeat: 10
+    timeout: 2
+
+services:
+  printer:
+    consumer:
+      exchange: general-sentiment-x
+      routing_key: general-sentiment-q
+      queue: general-sentiment-q
+    publisher:
+      exchange: general-sentiment-x
+      routing_key: general-sentiment-q

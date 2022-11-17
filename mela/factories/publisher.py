@@ -26,6 +26,10 @@ async def publisher(settings: PublisherParams) -> Publisher:
                 assert isinstance(settings.queue, QueueParams)
                 queue = await declare_queue(settings.queue, temp_channel)
                 await queue.bind(exchange, routing_key=settings.routing_key)
-        instance: Publisher = Publisher(**settings.get_params_dict(), exchange=exchange)
+        instance: Publisher = Publisher(
+            **settings.get_params_dict(),
+            exchange=exchange,
+            channel=channel,
+        )
         publishers[settings.name] = instance
     return publishers[settings.name]

@@ -1,8 +1,9 @@
+import asyncio
 from typing import Dict
 from typing import Optional
 from typing import Union
 
-from aio_pika import Message
+from aio_pika.abc import AbstractChannel
 from aio_pika.abc import AbstractExchange
 from aio_pika.abc import AbstractMessage
 from aiormq.abc import ConfirmationFrameType
@@ -23,6 +24,7 @@ class Publisher(Component, AbstractPublisher):
             log_level: str = 'info',
             *,
             exchange: Optional[AbstractExchange] = None,
+            channel: Optional[AbstractChannel] = None,
     ):
         super().__init__(name, log_level)
         self._default_routing_key = default_routing_key
@@ -30,6 +32,7 @@ class Publisher(Component, AbstractPublisher):
         self._exchange: Optional[AbstractExchange] = None
         if exchange:
             self.set_exchange(exchange)
+        self._channel = channel
 
     def set_exchange(self, exchange: AbstractExchange):
         assert self._exchange is None, "Exchange already is set"
@@ -46,6 +49,10 @@ class Publisher(Component, AbstractPublisher):
             routing_key = self._default_routing_key
         if timeout is None:
             timeout = self._default_timeout
+        while self._channel.is_closed:
+            # Hacky way to avoid ChannelInvalidStateError
+            # See https://github.com/mosquito/aio-pika/issues/508
+            await asyncio.sleep(0.001)
         return await self._exchange.publish(message, routing_key, timeout=timeout)
 
     async def publish(
