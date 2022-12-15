@@ -7,12 +7,20 @@ connections:
     heartbeat: 10
     timeout: 2
 
-services:
+consumers:
   printer:
-    consumer:
-      exchange: general-sentiment-x
-      routing_key: general-sentiment-q
-      queue: general-sentiment-q
-    publisher:
-      exchange: general-sentiment-x
-      routing_key: general-sentiment-q
+    exchange: general-sentiment-x
+    routing_key: general-sentiment-q
+    queue: general-sentiment-q
+
+rpc-services:
+  fetcher:
+    exchange: fetcher-x
+    routing_key: fetcher-k
+    queue: fetcher-q
+    response_exchange: fetching-result-x
+  fetcher-service:
+    exchange: fetcher-x
+    routing_key: fetcher-k
+    queue: fetcher-q
+    response_exchange: fetching-result-x

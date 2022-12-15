@@ -71,8 +71,8 @@ class Mela(MelaScheme):
                 requirement.resolve(self._settings),
             )
             if isinstance(instance, ConsumingComponent):
-                loop.run_until_complete(instance.prepare_processor(self, self.settings))
-                loop.run_until_complete(instance.consume())
+                loop.create_task(instance.prepare_processor(self, self.settings))
+                loop.create_task(instance.consume())
         if coro:
             loop.run_until_complete(coro)
         else:

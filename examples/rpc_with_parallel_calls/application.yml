@@ -1,0 +1,26 @@
+connections:
+  default:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+
+consumers:
+  feed_scroller:
+    exchange: rpc-with-parallel-calls-x
+    routing_key: common
+    queue: rpc-with-parallel-calls-q
+    prefetch_count: 2
+
+
+rpc-services:
+  fetcher:
+    exchange: fetcher-x
+    routing_key: fetcher-k
+    queue: fetcher-q
+    response_exchange: fetching-result-x
+  botmanager:
+    exchange: botmanager-x
+    routing_key: botmanager-k
+    queue: botmanager-q
+    response_exchange: botmanager-result-x

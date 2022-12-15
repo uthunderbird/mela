@@ -75,7 +75,8 @@ class Consumer(ConsumingComponent):
                 await message.nack(requeue=self.requeue_broken_messages)
                 self.log.exception("Message is broken:")
             else:
-                await message.ack()
+                if not message.processed:
+                    await message.ack()
 
         self.set_callback(wrapper)
 

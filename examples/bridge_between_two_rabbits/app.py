@@ -5,7 +5,6 @@ app = Mela(__name__)
 
 @app.service("bridge")
 async def serve(body, message):
-    print(body)
     return body
 
 

@@ -30,6 +30,7 @@ async def connect(
     if connection_settings.name is None:
         connection_settings.name = generate_anonymous_connection_name(component_name)
     full_connection_name = component_name + '_' + mode
+    connection_settings.name = full_connection_name
     if full_connection_name not in connections:
         params = connection_settings.get_params_dict()
         connection = await connect_robust(**params)

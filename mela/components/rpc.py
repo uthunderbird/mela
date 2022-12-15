@@ -1,3 +1,4 @@
+import asyncio.exceptions
 from asyncio import AbstractEventLoop
 from asyncio import Future
 from asyncio import Lock
@@ -18,6 +19,10 @@ from . import Consumer
 from . import Publisher
 from .base import ConsumingComponent
 from .exceptions import NackMessageError
+
+
+class RPCRequestCancelledError(Exception):
+    pass
 
 
 class RPC(ConsumingComponent):
@@ -126,8 +131,10 @@ class RPCClient(ConsumingComponent, AbstractRPCClient):
         self._futures[message.correlation_id] = future
 
         await self._request_publisher.publish_message(message)
-
-        return await future
+        try:
+            return await future
+        except asyncio.exceptions.CancelledError as e:
+            raise RPCRequestCancelledError("RPC request is cancelled by client") from e
 
     def _prepare_callback(self):
 
@@ -141,7 +148,7 @@ class RPCClient(ConsumingComponent, AbstractRPCClient):
             else:
                 parsed_response = loads(message.body)
             future: Future = self._futures.pop(message.correlation_id, None)
-            if future is not None:
+            if future is not None and not future.cancelled():
                 future.set_result(parsed_response)
             await message.ack()
 
