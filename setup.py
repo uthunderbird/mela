@@ -28,6 +28,6 @@ setuptools.setup(
         "Topic :: Software Development :: Libraries :: Application Frameworks",
         ""
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.11',
     install_requires=install_requires
 )
