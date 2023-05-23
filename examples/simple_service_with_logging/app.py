@@ -1,6 +1,5 @@
 from datetime import datetime
 from logging import Logger
-from logging import getLogger
 
 from pydantic import BaseModel
 from pydantic import Field

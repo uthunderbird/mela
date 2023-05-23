@@ -2,18 +2,8 @@ connections:
   default:
     host: localhost
     port: 5672
-    username: admin
-    password: admin
-
-services:
-  printer:
-    consumer:
-      exchange: general-sentiment-x
-      routing_key: general-sentiment-q
-      queue: general-sentiment-q
-    publisher:
-      exchange: general-sentiment-x
-      routing_key: general-sentiment-q
+    username: user
+    password: bitnami
 
 rpc-services:
   fetcher:

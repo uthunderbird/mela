@@ -7,7 +7,7 @@ app = Mela(__name__)
 
 
 async def fetch(url):
-    # let's pretend we're asynchronously fetching url here and return its body
+    # asynchronously fetching url here and return its body
     await asyncio.sleep(1)
     return url
 
@@ -28,7 +28,7 @@ def get_bot(bot_id):
     return bots[bot_id]
 
 
-@app.rpc_server("bot_manager")
+@app.rpc_service("bot_manager")
 async def fetcher(body, message: aio_pika.Message):
     if message.headers['method'] == 'create_bot':
         create_bot(**body)

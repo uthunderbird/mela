@@ -2,8 +2,8 @@ connections:
   default:
     host: localhost
     port: 5672
-    username: admin
-    password: admin
+    username: user
+    password: bitnami
 
 services:
   printer:

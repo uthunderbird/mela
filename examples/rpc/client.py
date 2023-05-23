@@ -45,4 +45,3 @@ if __name__ == '__main__':
         'hozyaystv-naschityvaetsya-v-kazahstane_a3896073'
     )
     app.run(main())
-    app.run()

@@ -1,25 +1,27 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from mela import Mela
 from mela.components import Publisher
 
-
-class Document(BaseModel):
-
-    text: str
-    url: str
-    likes_count: int = Field(alias='likesCount')
-    date: datetime
-
-
 app = Mela(__name__)
 
 
-@app.service('extra_publishing')
-async def logger(document: Document, extra_publisher: Publisher = 'log'):
-    await extra_publisher.publish(document)
+class Document(BaseModel):
+    text: str
+    url: str
+    date: datetime
+    has_images: bool = False
+
+
+@app.service('archiver')
+async def archiver(document: Document, images_downloader: Publisher = 'images-downloader') -> Document:
+    # archiving document
+
+    if document.has_images:
+        await images_downloader.publish(document)
+
     return document
 
 

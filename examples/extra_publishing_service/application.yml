@@ -6,18 +6,17 @@ connections:
     password: admin
 
 services:
-  extra_publishing:
+  archiver:
     consumer:
-      exchange: general-sentiment-x
-      routing_key: general-sentiment-q
-      queue: general-sentiment-q
+      exchange: archiver-x
+      routing_key: archiver-q
+      queue: archiver-q
     publisher:
-      exchange: test-x
-      routing_key: test_queue
+      exchange: notify-archived-x
+      exchange_type: topic
+      routing_key: document.archived
 
 publishers:
-  log:
-    exchange: log-x
-    exchange_type: topic
-    routing_key: splitter.test_queue
-    queue: log-q
+  images-downloader:
+    exchange: images-downloader-x
+    routing_key: images-downloader-q
