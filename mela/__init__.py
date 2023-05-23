@@ -1,6 +1,9 @@
 import asyncio
 from typing import Optional
 
+from aio_pika import IncomingMessage
+from aio_pika import Message
+
 from .components.base import Component
 from .components.base import ConsumingComponent
 from .factories.core.connection import close_all_connections
@@ -8,6 +11,9 @@ from .factories.publisher import publisher
 from .factories.rpc import client as rpc_client
 from .scheme import MelaScheme
 from .settings import Settings
+
+
+__all__ = ['IncomingMessage', 'Message', 'Mela']
 
 
 class Mela(MelaScheme):

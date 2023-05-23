@@ -1,7 +1,30 @@
-TODO
+TODO 1.2.0
 Policies declaration via app config (https://www.rabbitmq.com/parameters.html)
 Run separate service/consumer as worker
-Add ABC to prevent circular import hell
+Add ABC and typevars to prevent circular import hell
+Refactor Processor:
+- use Annotated type for injections
+- extract arguments from json body using path
+- make it possible to use different encoders/decoders
+- partial update based on returning type path
+Separate config parser layer and schema layer (kinda DTO for aio-pika or other lower layer)
+MORE TESTS
+Replace setup.py with pyproject.toml
+Make it possible to run separate consumers or services using cmd
+\ like`mela run service_name consumer_name`
+API for extensions
+(Discussible) Rewrite it to `aiormq`
+Ability to autogenerate publishers for consumers and services
+Solve typing issues
+CI/CD: add type and lint check into pipe
+Make it possible to configure app not only from Yaml file
+Make it possible to configure app from Yaml file with custom path
+Benchmarks
+Write quickstart
+
+1.1.0
+Readme update. Version bumps. Some examples update. Imported IncomingMessage and Message
+into Mela, to encapsulate dependencies.
 
 1.1.0a7
 Hotfix for ChannelInvalidStateError in publishers

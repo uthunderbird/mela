@@ -14,23 +14,28 @@ Basic usage does look like this:
 
 `app.py`:
 ```
+from pydantic import BaseModel
+from datetime import datetime
+
 from mela import Mela
 
 app = Mela(__name__)
-app.read_config_yaml('application.yml')
 
 
-@app.service("printer")
-def printer(body, message):
-    # Just print message body and push 
-    # unchanged message to output queue.
+class Document(BaseModel):
+    text: str
+    url: str
+    date: datetime
+
+
+@app.service('printer')
+def printer(body: Document) -> Document:
     print(body)
     return body
 
 
 if __name__ == '__main__':
     app.run()
-
 ```
 
 `application.yml`:
@@ -54,14 +59,36 @@ services:
 ```
 
 
-For more use cases and examples please 
-check `/examples` directory.
+For more use cases check `/examples` directory.
 
-## Authors
+## Contribute
+
+Clone this repo, create virtualenv using `make setup` command.
+
+NOTE: If you use PyCharm - don't let it create its own virtualenv.
+
+Run tests using `make test`
+
+Run linter using `make lint`
+
+Run mypy using `make type`
+
+Feel free to create issues.
+
+Feel free to contribute.
+
+Feel free to add yourself to `Authors` block in this document.
+
+You also can join [our Telegram chat](https://t.me/MelaFramework).
+
+Despite major version, there is a lot of work undone.
+You can check TODO section in changelog to find an interesting task 
+for you or check issues section of this repository.
+
+## Contributors
 
 Developed in Alem Research.
 
 Core maintainer: Daniyar Supiyev (undead.thunderbird@gmail.com).
 
 Sponsor: Sergazy Narynov.
-

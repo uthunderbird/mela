@@ -1,3 +1,4 @@
-aio-pika==8.2.2
+aio-pika==9.0.7
 envyaml==1.10.211231
 anyio==3.6.2
+pydantic==1.10.7
