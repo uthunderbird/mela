@@ -1,5 +1,9 @@
 # Alem Mela
 
+## DEPRECATED
+
+Use [FastStream](https://github.com/airtai/faststream) instead.
+
 ## Overview
 
 Asynchronous framework that makes it really simple to build RabbitMQ services.
